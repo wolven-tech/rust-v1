@@ -1,0 +1,508 @@
+# AI Assistant Instructions - Fullstack V1
+
+**READ THIS FIRST when working on this project!**
+
+---
+
+## 📋 Project Overview
+
+Fullstack V1 is a production-ready full-stack SaaS monorepo starter built with:
+- **Frontend**: Next.js 14+ with App Router, TypeScript, TanStack Query
+- **Backend**: Supabase (PostgreSQL, Auth, Storage)
+- **Monorepo**: Turborepo with Bun package manager
+- **UI**: TailwindCSS + Shadcn UI components
+- **Organization**: Wolven Tech Advisory
+
+---
+
+## 🎯 Package Manager: BUN ONLY
+
+**CRITICAL**: This project uses Bun as its package manager and runtime.
+
+### ✅ Required Commands:
+```bash
+bun install              # Install dependencies
+bun add <package>        # Add package
+bun add -D <package>     # Add dev dependency
+bun remove <package>     # Remove package
+bunx <command>           # Execute package binary
+bun run <script>         # Run npm script
+bun test                 # Run tests
+bun <file.ts>            # Execute TypeScript directly
+```
+
+### ❌ NEVER Use:
+- npm install / npm i / npm run / npx
+- yarn / pnpm
+- node (use bun instead)
+
+---
+
+## 📂 Project Structure
+
+```
+fullstack-v1/
+├── apps/                    # Deployable applications
+│   ├── app/                # Main SaaS app (Next.js on port 3000)
+│   ├── web/                # Marketing site (Next.js on port 3001)
+│   └── api/                # Supabase local development
+├── packages/                # Shared packages
+│   ├── react-query/        # TanStack Query setup
+│   ├── supabase/           # Supabase clients & queries
+│   ├── ui/                 # UI components (Shadcn)
+│   ├── analytics/          # PostHog integration
+│   ├── email/              # React Email templates
+│   ├── jobs/               # Trigger.dev background jobs
+│   ├── kv/                 # Upstash Redis utilities
+│   └── logger/             # Logging utilities
+├── tooling/                 # Development tools
+│   ├── typescript/         # Shared TS configs
+│   └── e2e/                # Playwright tests
+├── docs/                    # Documentation
+│   ├── current/            # Active documentation
+│   ├── guides/             # How-to guides
+│   ├── architecture/       # ADRs
+│   └── development/        # Dev standards
+├── biome.json              # Linter/formatter config
+├── turbo.json              # Turborepo config
+└── package.json            # Root package.json
+```
+
+---
+
+## 🚀 Development Workflow
+
+### Quick Start
+```bash
+# Install dependencies
+bun install
+
+# Start all apps in development
+bun dev
+
+# Start specific app
+bun dev:app          # Main app (port 3000)
+bun dev:web          # Marketing site (port 3001)
+```
+
+### Common Commands
+```bash
+# Development
+bun dev              # Start all apps
+bun dev:app          # Start main app only
+bun dev:web          # Start marketing site only
+
+# Building
+bun build            # Build all apps
+bun build --filter=@v1/app  # Build specific app
+
+# Code Quality
+bun lint             # Lint all code
+bun format           # Format all code with Biome
+bun typecheck        # Type check all code
+
+# Testing
+bun test             # Run unit tests
+bun test:e2e         # Run E2E tests (Playwright)
+
+# Cleaning
+bun clean            # Remove node_modules
+bun clean:workspaces # Remove build outputs
+```
+
+---
+
+## 📚 Documentation
+
+**ALWAYS** refer to the documentation in `/docs/` for detailed information:
+
+- **[Documentation Hub](./docs/README.md)** - Main documentation index
+- **[Getting Started](./docs/guides/GETTING_STARTED.md)** - Setup guide
+- **[Architecture](./docs/current/ARCHITECTURE.md)** - System architecture
+- **[React Query Guide](./docs/guides/REACT_QUERY_GUIDE.md)** - TanStack Query patterns
+- **[Monorepo Structure](./docs/current/MONOREPO_STRUCTURE.md)** - Repository organization
+
+---
+
+## 🏗️ Architecture Guidelines
+
+### Frontend (Next.js)
+
+**Component Structure**:
+- Server Components by default
+- Minimal 'use client' usage (only for interactivity)
+- Wrap client components in Suspense
+- Mobile-first responsive design
+- All shared UI components in `packages/ui`
+- App-specific components in `apps/app/src/components`
+
+**Code Style**:
+```typescript
+// Prefer interfaces over types
+interface UserProps {
+  isLoading: boolean
+  hasError: boolean
+}
+
+// Functional components only
+export function UserCard({ isLoading, hasError }: UserProps) {
+  // Early returns and guard clauses
+  if (hasError) return <ErrorState />
+  if (isLoading) return <LoadingState />
+
+  return <div>...</div>
+}
+```
+
+**State Management**:
+- TanStack Query (React Query) for server state
+- URL params for shareable state (nuqs)
+- Avoid useState/useEffect where possible
+- Server Actions for mutations (react-safe-action)
+
+**Styling**:
+- Use Tailwind CSS utility classes
+- Use `cn()` helper from `@v1/ui/cn` for conditional classes
+- Mobile-first responsive design (sm, md, lg, xl breakpoints)
+- Use Shadcn UI patterns for consistency
+
+### Data Fetching with TanStack Query
+
+**Setup** (already done in layout):
+```typescript
+import { ReactQueryProvider } from '@v1/react-query'
+
+export default function RootLayout({ children }) {
+  return (
+    <ReactQueryProvider>
+      {children}
+    </ReactQueryProvider>
+  )
+}
+```
+
+**Queries**:
+```typescript
+'use client'
+import { useServerQuery } from '@v1/react-query'
+import { getPosts } from '@v1/supabase/queries'
+
+export function PostList() {
+  const { data, isLoading, error } = useServerQuery(
+    'posts',           // Query key
+    () => getPosts()   // Server action
+  )
+
+  if (isLoading) return <div>Loading...</div>
+  if (error) return <div>Error: {error.message}</div>
+
+  return <ul>{data?.map(post => <li key={post.id}>{post.title}</li>)}</ul>
+}
+```
+
+**Mutations**:
+```typescript
+'use client'
+import { useServerMutation } from '@v1/react-query'
+import { updateUser } from '@v1/supabase/mutations'
+
+export function UserProfile() {
+  const mutation = useServerMutation(
+    updateUser,
+    {
+      onSuccess: () => console.log('Updated!')
+    },
+    ['user'] // Queries to invalidate
+  )
+
+  return (
+    <button
+      onClick={() => mutation.mutate({ name: 'New Name' })}
+      disabled={mutation.isPending}
+    >
+      {mutation.isPending ? 'Updating...' : 'Update Name'}
+    </button>
+  )
+}
+```
+
+### Backend (Supabase)
+
+**Server-Side Client**:
+```typescript
+import { createClient } from '@v1/supabase/server'
+
+export async function getUser() {
+  const supabase = createClient()
+  const { data, error } = await supabase.auth.getUser()
+
+  if (error) throw error
+  return data
+}
+```
+
+**Client-Side Client**:
+```typescript
+'use client'
+import { createClient } from '@v1/supabase/client'
+
+export function useSupabase() {
+  return createClient()
+}
+```
+
+---
+
+## 🎨 Adding New Features
+
+### Adding a New Package
+
+1. **Create directory**:
+   ```bash
+   mkdir -p packages/my-package/src
+   cd packages/my-package
+   ```
+
+2. **Create package.json**:
+   ```json
+   {
+     "name": "@v1/my-package",
+     "version": "1.0.0",
+     "private": true,
+     "exports": {
+       ".": "./src/index.ts"
+     }
+   }
+   ```
+
+3. **Create source files** in `src/`
+
+4. **Install in apps**:
+   ```bash
+   cd apps/app
+   bun add @v1/my-package@workspace:*
+   ```
+
+### Adding a New Component (Shared)
+
+1. **Create in packages/ui**:
+   ```bash
+   # packages/ui/src/components/my-component.tsx
+   export function MyComponent() {
+     return <div>My Component</div>
+   }
+   ```
+
+2. **Export from package**:
+   ```typescript
+   // packages/ui/src/index.ts
+   export { MyComponent } from './components/my-component'
+   ```
+
+3. **Use in app**:
+   ```typescript
+   import { MyComponent } from '@v1/ui'
+   ```
+
+### Creating Server Actions
+
+1. **Create action file**:
+   ```typescript
+   // apps/app/src/actions/my-action.ts
+   'use server'
+
+   import { authActionClient } from '@/actions/safe-action'
+   import { z } from 'zod'
+
+   const schema = z.object({
+     name: z.string()
+   })
+
+   export const myAction = authActionClient
+     .schema(schema)
+     .action(async ({ parsedInput, ctx }) => {
+       // Your logic here
+       return { success: true }
+     })
+   ```
+
+2. **Use with React Query**:
+   ```typescript
+   'use client'
+   import { useServerMutation } from '@v1/react-query'
+   import { myAction } from '@/actions/my-action'
+
+   const mutation = useServerMutation(myAction)
+   ```
+
+---
+
+## ✅ Code Quality Standards
+
+### Definition of Done (DoD)
+
+**ALL of these MUST pass before marking work as complete:**
+
+```bash
+bun lint             # ✅ No linting errors
+bun typecheck        # ✅ No type errors
+bun build            # ✅ Build succeeds
+bun test             # ✅ All tests pass
+```
+
+**If ANY quality gate fails**:
+1. STOP - Do not proceed
+2. FIX - Address all errors
+3. VERIFY - Re-run all checks
+4. ONLY THEN - Mark complete
+
+### Linting & Formatting
+
+- **TypeScript/JavaScript**: Biome (linter + formatter)
+- Run `bun lint` to check
+- Run `bun format` to auto-fix
+
+### Commit Messages
+
+Follow conventional commits:
+```
+feat: add user profile page
+fix: correct balance calculation
+docs: update architecture docs
+refactor: simplify auth logic
+test: add integration tests
+chore: update dependencies
+```
+
+---
+
+## 🔍 Troubleshooting
+
+### Port Already in Use
+
+```bash
+# Find and kill process on port 3000
+lsof -ti:3000 | xargs kill -9
+
+# Or port 3001
+lsof -ti:3001 | xargs kill -9
+```
+
+### TypeScript Errors
+
+```bash
+# Clean and rebuild
+bun clean:workspaces
+bun install
+bun typecheck
+```
+
+### Supabase Connection Issues
+
+1. Check `.env.local` has correct values
+2. Verify Supabase project is running
+3. Check network connectivity
+4. Review Supabase dashboard for errors
+
+### React Query Not Working
+
+1. Ensure `ReactQueryProvider` is in layout
+2. Check server actions are marked with `'use server'`
+3. Verify query keys are unique
+4. Check browser console for errors
+
+---
+
+## 🔑 Environment Variables
+
+### apps/app/.env.local
+```bash
+# Supabase
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+
+# PostHog
+NEXT_PUBLIC_POSTHOG_KEY=phc_your_key
+NEXT_PUBLIC_POSTHOG_HOST=https://app.posthog.com
+
+# Sentry
+NEXT_PUBLIC_SENTRY_DSN=https://xxx@xxx.ingest.sentry.io/xxx
+SENTRY_AUTH_TOKEN=your-auth-token
+
+# Upstash Redis
+UPSTASH_REDIS_REST_URL=https://your-redis.upstash.io
+UPSTASH_REDIS_REST_TOKEN=your-token
+
+# Resend
+RESEND_API_KEY=re_your_key
+
+# Trigger.dev
+TRIGGER_API_KEY=tr_your_key
+TRIGGER_API_URL=https://api.trigger.dev
+
+# Dub
+DUB_API_KEY=your-dub-key
+```
+
+### apps/web/.env.local
+```bash
+# PostHog
+NEXT_PUBLIC_POSTHOG_KEY=phc_your_key
+NEXT_PUBLIC_POSTHOG_HOST=https://app.posthog.com
+```
+
+---
+
+## 📦 Package Dependencies
+
+### Internal Dependencies
+
+Use `workspace:*` protocol:
+```json
+{
+  "dependencies": {
+    "@v1/react-query": "workspace:*",
+    "@v1/supabase": "workspace:*",
+    "@v1/ui": "workspace:*"
+  }
+}
+```
+
+### Dependency Graph
+
+```
+apps/app → @v1/react-query, @v1/supabase, @v1/ui, @v1/analytics, @v1/kv
+apps/web → @v1/ui, @v1/analytics
+@v1/supabase → @v1/logger
+```
+
+---
+
+## 🎓 Key Principles
+
+1. **Server Components First** - Use 'use client' sparingly
+2. **Type Safety** - TypeScript strict mode everywhere
+3. **Code Reuse** - Shared packages for common code
+4. **Clean Architecture** - Separation of concerns
+5. **Documentation** - Keep docs up to date
+6. **Quality Gates** - All checks must pass
+7. **Bun Only** - Never use npm/yarn/pnpm
+
+---
+
+## 📖 Additional Resources
+
+- [Turborepo Docs](https://turbo.build/repo/docs)
+- [Next.js App Router](https://nextjs.org/docs/app)
+- [TanStack Query Docs](https://tanstack.com/query/latest)
+- [Supabase Docs](https://supabase.com/docs)
+- [Shadcn UI](https://ui.shadcn.com/)
+- [Tailwind CSS](https://tailwindcss.com/)
+
+---
+
+**Last Updated**: 2025-11-18
+**Organization**: Wolven Tech Advisory
+**License**: MIT (Dual Copyright: Midday Labs AB & Wolven Tech Advisory)
+
+Remember: Quality over speed. Documentation is code. Tests are mandatory.

@@ -1,0 +1,89 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+node_modules
+.pnp
+.pnp.js
+
+# testing
+coverage
+
+# next.js
+.next/
+out/
+next-env.d.ts
+
+# expo
+.expo/
+dist/
+
+# production
+build
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# local env files
+.env
+.env*.local
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+
+# turbo
+.turbo
+
+# react-email
+.react-email
+packages/email/public
+!packages/email/public/.gitkeep
+!packages/email/.react-email/.gitkeep
+
+# Storybook
+storybook-static
+tailwind.css
+
+# Supabase
+.branches
+.temp
+
+# Trigger
+.trigger
+
+# Claude Code
+.claude/settings.local.json
+
+# Rust build artifacts
+apps/api/target/
+tooling/meta/target/
+target/
+**/*.rs.bk
+Cargo.lock.bak
+
+# Next.js specific
+.env.production
+
+# Meta logs
+meta-logs-*.txt
+
+# IDE
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.idea/
+.cursor/
+*.swp
+*.swo
+*~

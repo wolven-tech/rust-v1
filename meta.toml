@@ -1,0 +1,52 @@
+version = "1"
+
+[workspace]
+name = "Meta Monorepo"
+root = "."
+
+# Tool declarations
+[tools.turborepo]
+enabled = true
+command = "turbo"
+for_languages = ["typescript", "javascript"]
+for_tasks = ["dev", "build", "lint", "typecheck"]
+
+[tools.bacon]
+enabled = true
+command = "bacon"
+for_languages = ["rust"]
+for_tasks = ["dev"]
+
+[tools.cargo]
+enabled = true
+command = "cargo"
+for_languages = ["rust"]
+for_tasks = ["build", "test"]
+
+# Project definitions
+[projects.api]
+type = "rust"
+path = "apps/api"
+
+[projects.api.tasks]
+dev = { tool = "bacon", command = "run-long" }
+build = { tool = "cargo", command = "build --release" }
+test = { tool = "cargo", command = "test" }
+
+[projects.web]
+type = "next"
+path = "apps/web"
+
+[projects.web.tasks]
+dev = { tool = "turborepo", command = "dev --filter=@meta/web" }
+build = { tool = "turborepo", command = "build --filter=@meta/web" }
+test = { tool = "turborepo", command = "test --filter=@meta/web" }
+
+[projects.app]
+type = "next"
+path = "apps/app"
+
+[projects.app.tasks]
+dev = { tool = "turborepo", command = "dev --filter=@meta/app" }
+build = { tool = "turborepo", command = "build --filter=@meta/app" }
+test = { tool = "turborepo", command = "test --filter=@meta/app" }

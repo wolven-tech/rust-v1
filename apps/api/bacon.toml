@@ -1,0 +1,70 @@
+# Bacon configuration for API development
+# Bacon configuration for Rust development
+
+default_job = "run-long"
+
+[jobs.check]
+command = ["cargo", "check", "--color", "always"]
+need_stdout = false
+watch = ["src", "Cargo.toml"]
+
+[jobs.clippy]
+command = ["cargo", "clippy", "--color", "always", "--", "-W", "clippy::pedantic"]
+need_stdout = false
+watch = ["src", "Cargo.toml"]
+
+[jobs.test]
+command = ["cargo", "test", "--color", "always"]
+need_stdout = true
+watch = ["src", "tests", "Cargo.toml"]
+
+[jobs.run]
+command = ["cargo", "run", "--color", "always"]
+need_stdout = true
+allow_warnings = true
+watch = ["src", "Cargo.toml", ".env"]
+on_change_strategy = "wait_then_restart"
+
+[jobs.run-long]
+command = ["cargo", "run", "--color", "always"]
+need_stdout = true
+allow_warnings = true
+watch = ["src", "Cargo.toml", ".env"]
+on_change_strategy = "wait_then_restart"
+# Long timeout for API server
+timeout = 3600
+
+[jobs.build]
+command = ["cargo", "build", "--color", "always"]
+need_stdout = false
+watch = ["src", "Cargo.toml"]
+
+[jobs.build-release]
+command = ["cargo", "build", "--release", "--color", "always"]
+need_stdout = false
+watch = ["src", "Cargo.toml"]
+
+[jobs.doc]
+command = ["cargo", "doc", "--color", "always", "--no-deps", "--open"]
+need_stdout = false
+watch = ["src", "Cargo.toml"]
+
+[keybindings]
+# Toggle backtrace on/off
+b = "job:toggle-backtrace"
+# Toggle summary on/off
+s = "job:toggle-summary"
+# Toggle warnings on/off
+w = "job:toggle-warnings"
+# Quit bacon
+q = "quit"
+# Rerun current job
+r = "refresh"
+# Run check
+c = "job:check"
+# Run clippy
+l = "job:clippy"
+# Run tests
+t = "job:test"
+# Run dev server
+d = "job:run-long"

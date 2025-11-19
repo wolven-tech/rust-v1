@@ -1,0 +1,68 @@
+[package]
+name = "api"
+version = "1.0.0"
+edition = "2021"
+authors = ["V1 Team"]
+description = "V1 API Service - REST API with optional gRPC support"
+
+[[bin]]
+name = "api"
+path = "src/main.rs"
+
+[dependencies]
+# Web framework
+axum = "0.7"
+tower = "0.4"
+tower-http = { version = "0.5", features = ["cors", "trace", "timeout"] }
+hyper = { version = "1.0", features = ["full"] }
+tokio = { version = "1.0", features = ["full"] }
+socket2 = "0.5"
+
+# Async traits
+async-trait = "0.1"
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# HTTP client for external APIs (Loops API)
+reqwest = { version = "0.12", features = ["json"] }
+
+# Date/time
+chrono = { version = "0.4", features = ["serde"] }
+
+# Error handling
+thiserror = "2.0"
+anyhow = "1.0"
+
+# Logging and tracing
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+
+# OpenAPI documentation
+utoipa = { version = "4.2", features = ["axum_extras"] }
+utoipa-scalar = { version = "0.1", features = ["axum"] }
+
+# gRPC (optional for future microservices)
+tonic = { version = "0.12", features = ["tls"], optional = true }
+prost = { version = "0.13", optional = true }
+
+# Environment variables
+dotenvy = "0.15"
+
+# Configuration
+config = "0.14"
+
+[build-dependencies]
+tonic-build = { version = "0.12", optional = true }
+
+[dev-dependencies]
+mockall = "0.13"
+wiremock = "0.6"
+futures = "0.3"
+tokio-test = "0.4"
+tower = { version = "0.4", features = ["util"] }
+
+[features]
+default = []
+grpc = ["tonic", "prost", "tonic-build"]

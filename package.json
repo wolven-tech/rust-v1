@@ -1,0 +1,30 @@
+{
+  "name": "rust-v1",
+  "private": true,
+  "workspaces": ["packages/*", "apps/*", "tooling/*"],
+  "scripts": {
+    "clean": "git clean -xdf node_modules",
+    "clean:workspaces": "turbo clean",
+    "start:web": "turbo start --filter=@meta/web",
+    "start:app": "turbo start --filter=@meta/app",
+    "format": "biome format --write .",
+    "lint": "turbo lint && bun lint:repo",
+    "lint:repo": "bunx sherif@latest",
+    "lint:repo:fix": "bunx sherif@latest --fix",
+    "typecheck": "turbo typecheck",
+    "meta": "cd tooling/meta && cargo run --",
+    "meta:init": "cd tooling/meta && cargo run -- init",
+    "meta:dev": "cd tooling/meta && cargo run -- dev",
+    "meta:build": "cd tooling/meta && cargo run -- build",
+    "meta:test": "cd tooling/meta && cargo run -- test",
+    "meta:tui": "cd tooling/meta && cargo run -- tui"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "1.8.3",
+    "@t3-oss/env-nextjs": "^0.11.1",
+    "@types/bun": "^1.3.2",
+    "turbo": "2.1.1",
+    "typescript": "^5.5.4"
+  },
+  "packageManager": "bun@1.1.26"
+}

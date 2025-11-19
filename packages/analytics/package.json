@@ -1,0 +1,24 @@
+{
+  "name": "@meta/analytics",
+  "version": "1.0.0",
+  "main": "src/index.ts",
+  "private": true,
+  "sideEffects": false,
+  "scripts": {
+    "clean": "rm -rf .turbo node_modules",
+    "lint": "biome check .",
+    "format": "biome --write .",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@meta/logger": "workspace:*",
+    "@vercel/functions": "^1.4.1",
+    "posthog-js": "^1.294.0",
+    "posthog-node": "^5.11.2"
+  },
+  "exports": {
+    "./server": "./src/server.ts",
+    "./client": "./src/client.tsx",
+    "./events": "./src/events.ts"
+  }
+}

@@ -1,0 +1,294 @@
+# Meta - Monorepo Task Orchestrator
+
+> One TUI to rule them all 🚀
+
+**Meta** is a unified task orchestrator for modern monorepos. Stop juggling Turborepo, cargo, and bacon commands - let meta route tasks to the right tools automatically.
+
+**📦 Portable:** This directory is self-contained and can be copied to any monorepo. Just run `./install.sh` to get started!
+
+## Why Meta?
+
+Modern monorepos use **multiple specialized tools**:
+- 🟦 **Turborepo** - TypeScript/Next.js (with Vercel remote caching)
+- 🦀 **Cargo** - Rust builds and tests
+- 🥓 **Bacon** - Rust hot-reload development
+- 🌙 **Moon** - Polyglot task running (optional)
+
+**The Problem:** Context switching, different CLI syntax, no unified view.
+
+**The Solution:** Meta orchestrates all tools under one interface.
+
+## Features
+
+- ✅ **Smart Routing** - Automatically selects the right tool for each project
+- ✅ **Unified CLI** - One command for all tasks (`meta dev`, `meta build`, `meta test`)
+- ✅ **Parallel Execution** - Run multiple projects concurrently
+- ✅ **Zero Config** - Works with sensible defaults, configurable via `meta.toml`
+- ✅ **TUI Interface** - Beautiful terminal UI with Ratatui
+- ✅ **Log Streaming** - Real-time log aggregation with filtering
+- ✅ **Log Filtering** - Filter logs by project with color-coded output
+- 🚧 **Watch Mode** - Auto-restart on changes (coming soon)
+- 🚧 **Metrics** - Task execution insights (coming soon)
+
+## Installation
+
+### Quick Install (In Monorepo)
+
+```bash
+# Install from source
+cd tooling/meta
+cargo install --path .
+
+# Or use directly
+cargo run -- dev
+```
+
+### Standalone Installation
+
+**Want to use meta in your own project?** See the **[Standalone Installation Guide](../../docs/meta/STANDALONE.md)** for complete instructions on installing meta independently of this example monorepo.
+
+### Updating Meta
+
+```bash
+# In the monorepo
+cd tooling/meta
+git pull origin main
+cargo install --path .
+meta --version
+```
+
+For standalone installations, see the [Update Guide](../../docs/meta/STANDALONE.md#updating-meta).
+
+## Quick Start
+
+```bash
+# Initialize configuration
+meta init
+
+# Start all development servers
+meta dev
+
+# Start specific projects
+meta dev -p api -p web
+
+# Build all projects
+meta build
+
+# Build for production
+meta build --prod
+
+# Run tests
+meta test
+```
+
+## Configuration
+
+Meta uses `meta.toml` for configuration:
+
+```toml
+[workspace]
+name = "My Monorepo"
+root = "."
+
+[tools.turborepo]
+enabled = true
+command = "turbo"
+for_languages = ["typescript"]
+for_tasks = ["dev", "build"]
+
+[tools.bacon]
+enabled = true
+command = "bacon"
+for_languages = ["rust"]
+for_tasks = ["dev"]
+
+[projects.api]
+type = "rust"
+path = "apps/api"
+
+[projects.api.tasks]
+dev = { tool = "bacon", command = "run-long" }
+build = { tool = "cargo", command = "build --release" }
+```
+
+## CLI Commands
+
+### `meta init`
+Initialize `meta.toml` configuration file.
+
+### `meta dev`
+Start development servers for all projects.
+
+**Options:**
+- `-p, --projects <NAMES>` - Run specific projects only
+
+**Example:**
+```bash
+# Run all projects
+meta dev
+
+# Run only API and web
+meta dev -p api -p web
+```
+
+### `meta build`
+Build all projects.
+
+**Options:**
+- `--prod` - Production build
+- `-p, --projects <NAMES>` - Build specific projects
+
+**Example:**
+```bash
+# Development build
+meta build
+
+# Production build
+meta build --prod
+
+# Build specific projects
+meta build -p api --prod
+```
+
+### `meta test`
+Run tests for all projects.
+
+**Options:**
+- `-w, --watch` - Watch mode (coming soon)
+
+### `meta tui`
+Launch interactive TUI mode with real-time log streaming.
+
+**Features:**
+- Real-time log aggregation from all running projects
+- Color-coded logs (white for info, red for errors)
+- Filter logs by project (press `Enter` on a project)
+- Clear logs (press `c`)
+- Show all logs (press `a`)
+- Keyboard navigation (↑/↓ or j/k)
+
+**Example:**
+```bash
+meta tui
+
+# The TUI will:
+# 1. Start all dev servers
+# 2. Display project status in left panel
+# 3. Stream logs in real-time to right panel
+# 4. Allow filtering by selecting a project
+```
+
+## Architecture
+
+```
+meta/
+├── src/
+│   ├── cli.rs         # CLI parsing (clap)
+│   ├── config.rs      # meta.toml loading
+│   ├── adapters/      # Tool adapters
+│   ├── execution/     # Task execution
+│   └── tui/           # TUI interface (future)
+├── Cargo.toml
+└── README.md
+```
+
+## How It Works
+
+1. **Read Configuration** - Load `meta.toml`
+2. **Smart Routing** - Match tasks to appropriate tools
+3. **Parallel Execution** - Run tasks concurrently with tokio
+4. **Stream Output** - Show logs from all processes
+
+## Comparison
+
+| Tool | Purpose | Meta Advantage |
+|------|---------|----------------|
+| **Taskfile** | Task runner | TUI, smart routing, no manual orchestration |
+| **Turborepo** | JS/TS monorepo | Multi-language support (Rust + TS) |
+| **Just** | Command runner | Better for complex monorepos |
+
+## Roadmap
+
+### v0.1.0 ✅
+- [x] CLI with basic commands
+- [x] Configuration loading
+- [x] Tool adapters (turbo, cargo, bacon)
+- [x] Task routing
+- [x] Parallel execution
+
+### v0.2.0 (Current) ✅
+- [x] TUI dashboard (Ratatui)
+- [x] Real-time log streaming
+- [x] Log filtering by project
+- [x] Color-coded log output
+- [ ] Watch mode
+- [ ] Task history
+
+### v0.3.0 (Next)
+- [ ] Auto-restart on file changes
+- [ ] Enhanced task status tracking
+- [ ] Log search and pattern matching
+- [ ] Save/export logs
+
+### v0.3.0 (Future)
+- [ ] Remote execution (SSH)
+- [ ] Metrics and insights
+- [ ] Plugin system
+- [ ] CI/CD integration
+
+## Development
+
+```bash
+# Run meta in development
+cargo run -- dev
+
+# Run tests
+cargo test
+
+# Build release binary
+cargo build --release
+
+# Install locally
+cargo install --path .
+```
+
+### Quality Policy
+
+**Meta adheres to a strict zero-warning, zero-failure policy:**
+
+- ✅ All builds must complete without warnings
+- ✅ All tests must pass
+- ✅ Code formatted with `rustfmt`
+- ✅ Linted with `clippy -- -D warnings`
+
+**Before committing:**
+
+```bash
+# Check formatting
+cargo fmt -- --check
+
+# Lint with warnings as errors
+cargo clippy -- -D warnings
+
+# Run all tests
+cargo test
+
+# Verify zero-warning build
+cargo build --release 2>&1 | grep -E "(warning|error)"
+# Should show: Finished `release` profile [optimized] target(s)
+```
+
+## License
+
+MIT
+
+## Credits
+
+Inspired by:
+- [bacon](https://github.com/Canop/bacon) - Amazing Rust dev tool
+- [Turborepo](https://turbo.build) - Fast monorepo builds
+- [moon](https://moonrepo.dev) - Polyglot monorepo tool
+
+---
+
+**Built with ❤️ in Rust**

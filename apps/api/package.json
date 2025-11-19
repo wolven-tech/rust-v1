@@ -1,0 +1,17 @@
+{
+  "name": "@meta/api",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "bacon run-long",
+    "build": "cargo build --release",
+    "start": "cargo run --release",
+    "test": "cargo test",
+    "clean": "cargo clean",
+    "lint": "cargo clippy",
+    "format": "cargo fmt",
+    "typecheck": "cargo check",
+    "watch": "bacon run-long"
+  },
+  "devDependencies": {}
+}

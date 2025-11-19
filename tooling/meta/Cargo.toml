@@ -1,0 +1,45 @@
+[package]
+name = "meta"
+version = "0.2.1"
+edition = "2021"
+authors = ["Meta Team"]
+description = "Meta task orchestrator for monorepos - unified TUI for Turborepo, moon, bacon"
+license = "MIT"
+
+[[bin]]
+name = "meta"
+path = "src/main.rs"
+
+[dependencies]
+# CLI
+clap = { version = "4.5", features = ["derive", "env"] }
+
+# TUI
+ratatui = "0.28"
+crossterm = "0.28"
+
+# Async runtime
+tokio = { version = "1.40", features = ["full"] }
+
+# Configuration
+toml = "0.8"
+serde = { version = "1.0", features = ["derive"] }
+
+# Process management
+tokio-process = "0.2"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = "0.3"
+
+# Error handling
+anyhow = "1.0"
+thiserror = "2.0"
+
+# Time
+chrono = "0.4"
+
+[dev-dependencies]
+assert_cmd = "2.0"
+predicates = "3.0"
+tempfile = "3.0"
