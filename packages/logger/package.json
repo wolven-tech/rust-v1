@@ -1,5 +1,5 @@
 {
-  "name": "@meta/logger",
+  "name": "@rust-v1/logger",
   "main": "./src/index.ts",
   "version": "0.1.0",
   "private": true,
@@ -11,5 +11,8 @@
   },
   "dependencies": {
     "pino": "^9.3.2"
+  },
+  "devDependencies": {
+    "@rust-v1/typescript": "workspace:*"
   }
 }

@@ -95,18 +95,18 @@ type = "next"
 path = "apps/web"
 
 [projects.web.tasks]
-dev = { tool = "turborepo", command = "dev --filter=@meta/web" }
-build = { tool = "turborepo", command = "build --filter=@meta/web" }
-test = { tool = "turborepo", command = "test --filter=@meta/web" }
+dev = { tool = "turborepo", command = "dev --filter=@rust-v1/web" }
+build = { tool = "turborepo", command = "build --filter=@rust-v1/web" }
+test = { tool = "turborepo", command = "test --filter=@rust-v1/web" }
 
 [projects.app]
 type = "next"
 path = "apps/app"
 
 [projects.app.tasks]
-dev = { tool = "turborepo", command = "dev --filter=@meta/app" }
-build = { tool = "turborepo", command = "build --filter=@meta/app" }
-test = { tool = "turborepo", command = "test --filter=@meta/app" }
+dev = { tool = "turborepo", command = "dev --filter=@rust-v1/app" }
+build = { tool = "turborepo", command = "build --filter=@rust-v1/app" }
+test = { tool = "turborepo", command = "test --filter=@rust-v1/app" }
 "#;
 
     fs::write("meta.toml", default_config)?;

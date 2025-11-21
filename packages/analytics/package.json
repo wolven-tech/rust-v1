@@ -1,5 +1,5 @@
 {
-  "name": "@meta/analytics",
+  "name": "@rust-v1/analytics",
   "version": "1.0.0",
   "main": "src/index.ts",
   "private": true,
@@ -11,10 +11,13 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@meta/logger": "workspace:*",
+    "@rust-v1/logger": "workspace:*",
     "@vercel/functions": "^1.4.1",
     "posthog-js": "^1.294.0",
     "posthog-node": "^5.11.2"
+  },
+  "devDependencies": {
+    "@rust-v1/typescript": "workspace:*"
   },
   "exports": {
     "./server": "./src/server.ts",

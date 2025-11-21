@@ -1,5 +1,5 @@
 {
-  "name": "@meta/email",
+  "name": "@rust-v1/email",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -16,6 +16,7 @@
     "@react-email/tailwind": "^0.1.0"
   },
   "devDependencies": {
+    "@rust-v1/typescript": "workspace:*",
     "react-email": "^3.0.1"
   }
 }

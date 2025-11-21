@@ -1,5 +1,5 @@
 {
-  "name": "@meta/kv",
+  "name": "@rust-v1/kv",
   "version": "1.0.0",
   "private": true,
   "main": "src/index.ts",
@@ -17,5 +17,8 @@
     "@upstash/ratelimit": "^2.0.2",
     "@upstash/redis": "^1.34.0",
     "server-only": "^0.0.1"
+  },
+  "devDependencies": {
+    "@rust-v1/typescript": "workspace:*"
   }
 }

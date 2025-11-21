@@ -106,7 +106,7 @@ Version history and detailed release notes.
 Historical documentation preserved for reference:
 
 - 📦 **[Final Delivery v0.1.0](archive/FINAL_DELIVERY.md)** - Initial transformation delivery
-- 📦 **[Rebranding Summary](archive/REBRANDING_AND_META_SUMMARY.md)** - @v1 → @meta migration
+- 📦 **[Rebranding Summary](archive/REBRANDING_AND_META_SUMMARY.md)** - @v1 → @rust-v1 migration
 
 ---
 
