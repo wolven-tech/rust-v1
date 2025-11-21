@@ -21,7 +21,7 @@ for_tasks = ["dev"]
 enabled = true
 command = "cargo"
 for_languages = ["rust"]
-for_tasks = ["build", "test"]
+for_tasks = ["build", "test", "fmt", "clippy", "audit"]
 
 # Project definitions
 [projects.api]
@@ -50,3 +50,19 @@ path = "apps/app"
 dev = { tool = "turborepo", command = "dev --filter=@rust-v1/app" }
 build = { tool = "turborepo", command = "build --filter=@rust-v1/app" }
 test = { tool = "turborepo", command = "test --filter=@rust-v1/app" }
+
+# Meta tool itself - dogfooding!
+[projects.meta]
+type = "rust"
+path = "tooling/meta"
+
+[projects.meta.tasks]
+dev = { tool = "bacon", command = "check" }
+build = { tool = "cargo", command = "build --release" }
+test = { tool = "cargo", command = "test --verbose" }
+fmt = { tool = "cargo", command = "fmt --all -- --check" }
+fmt-fix = { tool = "cargo", command = "fmt --all" }
+clippy = { tool = "cargo", command = "clippy --all-targets --all-features -- -D warnings" }
+clippy-fix = { tool = "cargo", command = "clippy --all-targets --all-features --fix --allow-dirty" }
+audit = { tool = "cargo", command = "audit" }
+check = { tool = "cargo", command = "check --all-targets" }

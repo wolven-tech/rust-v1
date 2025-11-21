@@ -1,6 +1,6 @@
+use std::{path::Path, process::Stdio};
+
 use anyhow::Result;
-use std::path::Path;
-use std::process::Stdio;
 use tokio::process::Command;
 
 pub struct ToolAdapter {
@@ -13,32 +13,16 @@ impl ToolAdapter {
         Self { name, command }
     }
 
-    pub async fn execute(&self, args: &[&str]) -> Result<()> {
-        let mut cmd = Command::new(&self.command);
-        cmd.args(args);
-        cmd.stdout(Stdio::inherit());
-        cmd.stderr(Stdio::inherit());
-
-        let status = cmd.status().await?;
-
-        if !status.success() {
-            anyhow::bail!(
-                "{} command failed: {} {}",
-                self.name,
-                self.command,
-                args.join(" ")
-            );
-        }
-
-        Ok(())
-    }
-
     pub async fn execute_in(&self, args: &[&str], working_dir: &Path) -> Result<()> {
         let mut cmd = Command::new(&self.command);
         cmd.args(args);
         cmd.current_dir(working_dir);
         cmd.stdout(Stdio::inherit());
         cmd.stderr(Stdio::inherit());
+
+        // Enable colored output
+        cmd.env("CARGO_TERM_COLOR", "always");
+        cmd.env("FORCE_COLOR", "1");
 
         let status = cmd.status().await?;
 
@@ -55,22 +39,25 @@ impl ToolAdapter {
         Ok(())
     }
 
-    pub fn spawn(&self, args: &[&str]) -> Result<tokio::process::Child> {
-        let mut cmd = Command::new(&self.command);
-        cmd.args(args);
-        cmd.stdout(Stdio::piped());
-        cmd.stderr(Stdio::piped());
-
-        let child = cmd.spawn()?;
-        Ok(child)
-    }
-
     pub fn spawn_in(&self, args: &[&str], working_dir: &Path) -> Result<tokio::process::Child> {
         let mut cmd = Command::new(&self.command);
-        cmd.args(args);
+
+        // Bacon-specific: add --headless flag for non-interactive mode with output
+        if self.command == "bacon" {
+            // Insert --headless before the job name
+            cmd.arg("--headless");
+            cmd.args(args);
+        } else {
+            cmd.args(args);
+        }
+
         cmd.current_dir(working_dir);
         cmd.stdout(Stdio::piped());
         cmd.stderr(Stdio::piped());
+
+        // Enable colored output
+        cmd.env("CARGO_TERM_COLOR", "always");
+        cmd.env("FORCE_COLOR", "1");
 
         let child = cmd.spawn()?;
         Ok(child)

@@ -39,6 +39,16 @@ pub enum Commands {
         watch: bool,
     },
 
+    /// Run a specific task (e.g., meta run fmt, meta run clippy)
+    Run {
+        /// Task name to run
+        task: String,
+
+        /// Specific projects to run task for (optional)
+        #[arg(short, long)]
+        projects: Option<Vec<String>>,
+    },
+
     /// Interactive TUI mode (default)
     Tui,
 }

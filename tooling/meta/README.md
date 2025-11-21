@@ -156,6 +156,35 @@ Run tests for all projects.
 **Options:**
 - `-w, --watch` - Watch mode (coming soon)
 
+### `meta run <task>`
+Run a specific task across all projects (or selected projects).
+
+**Options:**
+- `-p, --projects <NAMES>` - Run task for specific projects only
+
+**Examples:**
+```bash
+# Run formatting check across all projects
+meta run fmt
+
+# Run clippy only on the meta project itself
+meta run clippy -p meta
+
+# Run security audit
+meta run audit
+
+# Auto-fix formatting
+meta run fmt-fix
+```
+
+**Common Tasks:**
+- `fmt` - Check code formatting
+- `fmt-fix` - Auto-format code
+- `clippy` - Lint code with zero warnings
+- `clippy-fix` - Auto-fix lint issues
+- `audit` - Security vulnerability audit
+- `check` - Fast compile check without building
+
 ### `meta tui`
 Launch interactive TUI mode with real-time log streaming.
 
@@ -260,23 +289,84 @@ cargo install --path .
 - ✅ All tests must pass
 - ✅ Code formatted with `rustfmt`
 - ✅ Linted with `clippy -- -D warnings`
+- ✅ Security audit passes
+- ✅ All quality gates enforced in CI/CD
 
 **Before committing:**
 
 ```bash
-# Check formatting
-cargo fmt -- --check
-
-# Lint with warnings as errors
-cargo clippy -- -D warnings
-
-# Run all tests
-cargo test
+# Run quality checks using meta itself (dogfooding!)
+cd tooling/meta
+meta run fmt          # Check formatting
+meta run clippy       # Lint with warnings as errors
+meta test             # Run all tests
+meta run audit        # Security audit
 
 # Verify zero-warning build
-cargo build --release 2>&1 | grep -E "(warning|error)"
-# Should show: Finished `release` profile [optimized] target(s)
+cargo build --release
 ```
+
+### Available Meta Commands (Dogfooding)
+
+Meta uses itself for quality gates! All commands run from `tooling/meta` directory:
+
+```bash
+meta run fmt          # Check formatting
+meta run fmt-fix      # Auto-format code
+meta run clippy       # Run linter (zero warnings)
+meta run clippy-fix   # Auto-fix lint issues
+meta run audit        # Security audit
+meta run check        # Fast compile check
+meta build --prod     # Build release binary
+meta test             # Run all tests
+```
+
+## 🤝 Contributing
+
+All contributions must pass our quality gates:
+
+### Quality Gates Enforced
+
+1. **Code Formatting** (`cargo fmt --check`)
+   - All code must be formatted with rustfmt
+   - Configuration in `rustfmt.toml`
+
+2. **Linting** (`cargo clippy -- -D warnings`)
+   - Zero clippy warnings allowed
+   - Configuration in `.clippy.toml`
+
+3. **Testing** (`cargo test`)
+   - All tests must pass
+   - Integration and unit tests
+
+4. **Security Audit** (`cargo audit`)
+   - No known vulnerabilities
+
+5. **Cross-Platform** (CI)
+   - Tests on Ubuntu, macOS, Windows
+   - Rust stable and beta
+
+### CI/CD Pipeline
+
+Our GitHub Actions workflow (`.github/workflows/meta-ci.yml`) runs on every PR:
+
+- ✅ **Tests** - On Ubuntu, macOS, Windows with stable and beta Rust
+- ✅ **Formatting Check** - Ensures code is formatted
+- ✅ **Clippy Linting** - Zero warnings policy
+- ✅ **Security Audit** - Checks for vulnerabilities
+- ✅ **Build Artifacts** - Produces binaries for all platforms
+- ✅ **Code Coverage** - Tracks test coverage with Codecov
+
+### PR Checklist
+
+Before submitting a PR:
+
+- [ ] Run `make pre-commit` successfully
+- [ ] Add tests for new features
+- [ ] Update documentation if needed
+- [ ] Add entry to CHANGELOG.md (if exists)
+- [ ] Ensure no new warnings or errors
+- [ ] Verify builds on your platform
 
 ## License
 

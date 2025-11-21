@@ -1,0 +1,5 @@
+# Clippy configuration for meta
+msrv = "1.70.0"
+
+# Enforce warnings on all wildcard imports
+warn-on-all-wildcard-imports = true

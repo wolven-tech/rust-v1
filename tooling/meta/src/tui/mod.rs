@@ -1,3 +1,10 @@
+use std::{
+    collections::HashMap,
+    fs::File,
+    io::{self, Write},
+    time::{Duration, Instant},
+};
+
 use anyhow::Result;
 use crossterm::{
     event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyModifiers},
@@ -12,12 +19,11 @@ use ratatui::{
     widgets::{Block, Borders, List, ListItem, Paragraph},
     Terminal,
 };
-use std::io::{self, Write};
-use std::time::{Duration, Instant};
-use std::fs::File;
 
-use crate::config::Config;
-use crate::execution::{LogMessage, LogReceiver};
+use crate::{
+    config::Config,
+    execution::{LogMessage, LogReceiver, ProcessReceiver, ProcessStatus, StatusReceiver},
+};
 
 pub struct App {
     config: Config,
@@ -25,6 +31,8 @@ pub struct App {
     running_tasks: Vec<RunningTask>,
     logs: Vec<LogMessage>,
     log_rx: Option<LogReceiver>,
+    status_rx: Option<StatusReceiver>,
+    process_rx: Option<ProcessReceiver>,
     should_quit: bool,
     filter_project: Option<String>,
     max_logs: usize,
@@ -33,20 +41,20 @@ pub struct App {
     search_buffer: String,
     search_mode: bool,
     export_message: Option<(String, Instant)>,
+    focused_panel: FocusedPanel,
+    process_ids: HashMap<String, u32>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+enum FocusedPanel {
+    Projects,
+    Logs,
 }
 
 struct RunningTask {
     name: String,
-    status: TaskStatus,
+    status: ProcessStatus,
     tool: String,
-}
-
-#[derive(Clone)]
-enum TaskStatus {
-    Pending,
-    Running,
-    Success,
-    Failed,
 }
 
 impl App {
@@ -57,6 +65,8 @@ impl App {
             running_tasks: Vec::new(),
             logs: Vec::new(),
             log_rx: None,
+            status_rx: None,
+            process_rx: None,
             should_quit: false,
             filter_project: None,
             max_logs: 1000,
@@ -65,11 +75,20 @@ impl App {
             search_buffer: String::new(),
             search_mode: false,
             export_message: None,
+            focused_panel: FocusedPanel::Projects,
+            process_ids: HashMap::new(),
         }
     }
 
-    pub fn with_log_receiver(mut self, log_rx: LogReceiver) -> Self {
+    pub fn with_receivers(
+        mut self,
+        log_rx: LogReceiver,
+        status_rx: StatusReceiver,
+        process_rx: ProcessReceiver,
+    ) -> Self {
         self.log_rx = Some(log_rx);
+        self.status_rx = Some(status_rx);
+        self.process_rx = Some(process_rx);
         self
     }
 
@@ -124,19 +143,56 @@ impl App {
                             KeyCode::Char('q') | KeyCode::Esc => {
                                 self.should_quit = true;
                             }
+                            KeyCode::Tab => {
+                                // Switch focus between panels
+                                self.focused_panel = match self.focused_panel {
+                                    FocusedPanel::Projects => FocusedPanel::Logs,
+                                    FocusedPanel::Logs => FocusedPanel::Projects,
+                                };
+                            }
                             KeyCode::Down | KeyCode::Char('j') => {
-                                self.select_next();
+                                if self.focused_panel == FocusedPanel::Projects {
+                                    self.select_next();
+                                } else {
+                                    // Scroll logs down
+                                    let filtered_count = self.get_filtered_logs().len();
+                                    self.auto_scroll = false;
+                                    self.log_scroll = self
+                                        .log_scroll
+                                        .saturating_add(1)
+                                        .min(filtered_count.saturating_sub(1));
+                                }
                             }
                             KeyCode::Up | KeyCode::Char('k') => {
-                                self.select_previous();
+                                if self.focused_panel == FocusedPanel::Projects {
+                                    self.select_previous();
+                                } else {
+                                    // Scroll logs up
+                                    self.auto_scroll = false;
+                                    self.log_scroll = self.log_scroll.saturating_sub(1);
+                                }
                             }
-                            KeyCode::Char('g') if key.modifiers.contains(KeyModifiers::NONE) => {
-                                // Jump to top project
-                                self.selected_project = 0;
+                            KeyCode::Char('g') if key.modifiers.contains(KeyModifiers::SHIFT) => {
+                                // G: Jump to bottom project
+                                if self.focused_panel == FocusedPanel::Projects {
+                                    self.selected_project =
+                                        self.running_tasks.len().saturating_sub(1);
+                                } else {
+                                    // Jump to bottom of logs
+                                    self.auto_scroll = true;
+                                    let filtered_count = self.get_filtered_logs().len();
+                                    self.log_scroll = filtered_count.saturating_sub(1);
+                                }
                             }
-                            KeyCode::Char('G') | KeyCode::Char('g') if key.modifiers.contains(KeyModifiers::SHIFT) => {
-                                // Jump to bottom project
-                                self.selected_project = self.running_tasks.len().saturating_sub(1);
+                            KeyCode::Char('g') => {
+                                // g: Jump to top project
+                                if self.focused_panel == FocusedPanel::Projects {
+                                    self.selected_project = 0;
+                                } else {
+                                    // Jump to top of logs
+                                    self.auto_scroll = false;
+                                    self.log_scroll = 0;
+                                }
                             }
                             KeyCode::Enter | KeyCode::Char(' ') => {
                                 // Toggle filter for selected project
@@ -151,7 +207,9 @@ impl App {
                                     }
                                 }
                             }
-                            KeyCode::Char('c') if !key.modifiers.contains(KeyModifiers::CONTROL) => {
+                            KeyCode::Char('c')
+                                if !key.modifiers.contains(KeyModifiers::CONTROL) =>
+                            {
                                 // Clear logs
                                 self.logs.clear();
                                 self.log_scroll = 0;
@@ -205,7 +263,9 @@ impl App {
                             KeyCode::Char('d') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                                 // Ctrl+D: Scroll down half page
                                 let filtered_count = self.get_filtered_logs().len();
-                                self.log_scroll = self.log_scroll.saturating_add(15)
+                                self.log_scroll = self
+                                    .log_scroll
+                                    .saturating_add(15)
                                     .min(filtered_count.saturating_sub(1));
                                 // Re-enable auto-scroll if at bottom
                                 if self.log_scroll >= filtered_count.saturating_sub(1) {
@@ -220,7 +280,9 @@ impl App {
                             KeyCode::Char('f') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                                 // Ctrl+F: Scroll down full page
                                 let filtered_count = self.get_filtered_logs().len();
-                                self.log_scroll = self.log_scroll.saturating_add(30)
+                                self.log_scroll = self
+                                    .log_scroll
+                                    .saturating_add(30)
                                     .min(filtered_count.saturating_sub(1));
                                 // Re-enable auto-scroll if at bottom
                                 if self.log_scroll >= filtered_count.saturating_sub(1) {
@@ -235,7 +297,9 @@ impl App {
                             KeyCode::PageDown => {
                                 // Scroll down
                                 let filtered_count = self.get_filtered_logs().len();
-                                self.log_scroll = self.log_scroll.saturating_add(10)
+                                self.log_scroll = self
+                                    .log_scroll
+                                    .saturating_add(10)
                                     .min(filtered_count.saturating_sub(1));
                                 // Re-enable auto-scroll if at bottom
                                 if self.log_scroll >= filtered_count.saturating_sub(1) {
@@ -267,7 +331,16 @@ impl App {
                     }
                 }
 
-                // Receive new log messages - ALWAYS add to buffer, filtering is done at display time
+                // Receive process IDs
+                if let Some(ref mut process_rx) = self.process_rx {
+                    while let Ok(process_info) = process_rx.try_recv() {
+                        self.process_ids
+                            .insert(process_info.project, process_info.pid);
+                    }
+                }
+
+                // Receive new log messages - ALWAYS add to buffer, filtering is done at display
+                // time
                 if let Some(ref mut log_rx) = self.log_rx {
                     while let Ok(log_msg) = log_rx.try_recv() {
                         self.logs.push(log_msg);
@@ -282,7 +355,10 @@ impl App {
                         // Auto-scroll to bottom if enabled
                         if self.auto_scroll {
                             let filtered_count = if let Some(ref filter) = self.filter_project {
-                                self.logs.iter().filter(|log| &log.project == filter).count()
+                                self.logs
+                                    .iter()
+                                    .filter(|log| &log.project == filter)
+                                    .count()
                             } else {
                                 self.logs.len()
                             };
@@ -302,6 +378,9 @@ impl App {
             }
         }
 
+        // Kill all running processes before exiting
+        self.cleanup_processes();
+
         // Restore terminal
         disable_raw_mode()?;
         execute!(
@@ -314,13 +393,34 @@ impl App {
         Ok(())
     }
 
+    fn cleanup_processes(&self) {
+        use std::process::Command;
+
+        for (project, pid) in &self.process_ids {
+            // Send SIGTERM to the process
+            #[cfg(unix)]
+            {
+                let _ = Command::new("kill").arg(pid.to_string()).output();
+            }
+
+            #[cfg(windows)]
+            {
+                let _ = Command::new("taskkill")
+                    .args(&["/PID", &pid.to_string(), "/F"])
+                    .output();
+            }
+
+            tracing::info!("Killed process {} for project {}", pid, project);
+        }
+    }
+
     fn init_tasks(&mut self) {
         // Add all configured projects as tasks
         for (name, project) in &self.config.projects {
             if project.tasks.contains_key("dev") {
                 self.running_tasks.push(RunningTask {
                     name: name.clone(),
-                    status: TaskStatus::Pending,
+                    status: ProcessStatus::Starting,
                     tool: project.tasks.get("dev").unwrap().tool.clone(),
                 });
             }
@@ -338,41 +438,17 @@ impl App {
     }
 
     fn update_task_status(&mut self) {
-        // Update task statuses based on log activity
-        if !self.logs.is_empty() {
-            for task in &mut self.running_tasks {
-                // Get recent logs for this project
-                let project_logs: Vec<_> = self.logs
-                    .iter()
-                    .filter(|log| log.project == task.name)
-                    .collect();
-
-                if project_logs.is_empty() {
-                    continue;
+        // Receive status updates from the execution module
+        if let Some(ref mut status_rx) = self.status_rx {
+            while let Ok(status_update) = status_rx.try_recv() {
+                // Find the task and update its status
+                if let Some(task) = self
+                    .running_tasks
+                    .iter_mut()
+                    .find(|t| t.name == status_update.project)
+                {
+                    task.status = status_update.status;
                 }
-
-                // Check for errors in recent logs
-                let has_errors = project_logs.iter().any(|log| {
-                    matches!(log.level, crate::execution::LogLevel::Error)
-                });
-
-                // Check for success indicators
-                let has_success = project_logs.iter().any(|log| {
-                    let lower = log.message.to_lowercase();
-                    lower.contains("compiled successfully")
-                        || lower.contains("ready")
-                        || lower.contains("listening")
-                        || lower.contains("started")
-                });
-
-                // Update status based on logs
-                task.status = if has_errors {
-                    TaskStatus::Failed
-                } else if has_success {
-                    TaskStatus::Success
-                } else {
-                    TaskStatus::Running
-                };
             }
         }
     }
@@ -430,24 +506,20 @@ impl App {
                         "[{}] [{}] [{}] {}",
                         log.timestamp, log.project, level_str, log.message
                     ) {
-                        self.export_message = Some((
-                            format!("❌ Error writing logs: {}", e),
-                            Instant::now()
-                        ));
+                        self.export_message =
+                            Some((format!("❌ Error writing logs: {}", e), Instant::now()));
                         return;
                     }
                 }
 
                 self.export_message = Some((
                     format!("✅ Exported {} logs to {}", log_count, filename),
-                    Instant::now()
+                    Instant::now(),
                 ));
             }
             Err(e) => {
-                self.export_message = Some((
-                    format!("❌ Failed to create file: {}", e),
-                    Instant::now()
-                ));
+                self.export_message =
+                    Some((format!("❌ Failed to create file: {}", e), Instant::now()));
             }
         }
     }
@@ -475,16 +547,13 @@ impl App {
         {
             use std::process::{Command, Stdio};
 
-            match Command::new("pbcopy")
-                .stdin(Stdio::piped())
-                .spawn()
-            {
+            match Command::new("pbcopy").stdin(Stdio::piped()).spawn() {
                 Ok(mut child) => {
                     if let Some(mut stdin) = child.stdin.take() {
                         if let Err(e) = stdin.write_all(output.as_bytes()) {
                             self.export_message = Some((
                                 format!("❌ Failed to write to clipboard: {}", e),
-                                Instant::now()
+                                Instant::now(),
                             ));
                             return;
                         }
@@ -494,14 +563,12 @@ impl App {
                             Ok(_) => {
                                 self.export_message = Some((
                                     format!("✅ Copied {} logs to clipboard", log_count),
-                                    Instant::now()
+                                    Instant::now(),
                                 ));
                             }
                             Err(e) => {
-                                self.export_message = Some((
-                                    format!("❌ Clipboard error: {}", e),
-                                    Instant::now()
-                                ));
+                                self.export_message =
+                                    Some((format!("❌ Clipboard error: {}", e), Instant::now()));
                             }
                         }
                     }
@@ -509,7 +576,7 @@ impl App {
                 Err(e) => {
                     self.export_message = Some((
                         format!("❌ pbcopy not available: {}. Use 'e' to export to file.", e),
-                        Instant::now()
+                        Instant::now(),
                     ));
                 }
             }
@@ -518,8 +585,9 @@ impl App {
         #[cfg(not(target_os = "macos"))]
         {
             self.export_message = Some((
-                "❌ Clipboard not available on this platform. Use 'e' to export to file.".to_string(),
-                Instant::now()
+                "❌ Clipboard not available on this platform. Use 'e' to export to file."
+                    .to_string(),
+                Instant::now(),
             ));
         }
     }
@@ -528,7 +596,7 @@ impl App {
         if self.filter_project.is_none() {
             self.export_message = Some((
                 "❌ No filter active. Use 'e' to export all logs.".to_string(),
-                Instant::now()
+                Instant::now(),
             ));
             return;
         }
@@ -541,36 +609,45 @@ impl App {
         let chunks = Layout::default()
             .direction(Direction::Vertical)
             .constraints([
-                Constraint::Length(3),   // Header
-                Constraint::Min(0),      // Main content
-                Constraint::Length(3),   // Footer
+                Constraint::Length(3), // Header
+                Constraint::Min(0),    // Main content
+                Constraint::Length(3), // Footer
             ])
             .split(f.area());
 
         // Header - show export message if present
         let header_content = if let Some((ref message, _)) = self.export_message {
             vec![Line::from(vec![
-                Span::styled("Meta ", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    "Meta ",
+                    Style::default()
+                        .fg(Color::Cyan)
+                        .add_modifier(Modifier::BOLD),
+                ),
                 Span::raw("Task Orchestrator | "),
                 Span::raw(message),
             ])]
         } else {
             vec![Line::from(vec![
-                Span::styled("Meta ", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    "Meta ",
+                    Style::default()
+                        .fg(Color::Cyan)
+                        .add_modifier(Modifier::BOLD),
+                ),
                 Span::raw("Task Orchestrator"),
             ])]
         };
 
-        let header = Paragraph::new(header_content)
-            .block(Block::default().borders(Borders::ALL));
+        let header = Paragraph::new(header_content).block(Block::default().borders(Borders::ALL));
         f.render_widget(header, chunks[0]);
 
         // Main content - split into projects and logs
         let main_chunks = Layout::default()
             .direction(Direction::Horizontal)
             .constraints([
-                Constraint::Percentage(40),  // Projects list
-                Constraint::Percentage(60),  // Logs
+                Constraint::Percentage(40), // Projects list
+                Constraint::Percentage(60), // Logs
             ])
             .split(chunks[1]);
 
@@ -581,10 +658,11 @@ impl App {
             .enumerate()
             .map(|(i, task)| {
                 let icon = match task.status {
-                    TaskStatus::Pending => "⏸  ",
-                    TaskStatus::Running => "▶  ",
-                    TaskStatus::Success => "✅ ",
-                    TaskStatus::Failed => "❌ ",
+                    ProcessStatus::Starting => "🔄 ",
+                    ProcessStatus::Running => "▶  ",
+                    ProcessStatus::Success => "✅ ",
+                    ProcessStatus::Failed => "❌ ",
+                    ProcessStatus::Crashed => "💥 ",
                 };
 
                 let is_selected = i == self.selected_project;
@@ -594,10 +672,7 @@ impl App {
                 let number = format!("{}. ", i + 1);
                 let number_span = Span::styled(number, Style::default().fg(Color::DarkGray));
 
-                let mut spans = vec![
-                    number_span,
-                    Span::raw(icon),
-                ];
+                let mut spans = vec![number_span, Span::raw(icon)];
 
                 // Highlight filtered project with special marker
                 if is_filtered {
@@ -634,12 +709,25 @@ impl App {
 
         let project_title = if self.search_mode {
             format!("Projects [search: {}]", self.search_buffer)
+        } else if self.focused_panel == FocusedPanel::Projects {
+            "Projects [FOCUSED - Tab: switch] [1-9: jump, /: search]".to_string()
         } else {
-            "Projects [1-9: jump, /: search]".to_string()
+            "Projects [Tab: switch] [1-9: jump, /: search]".to_string()
+        };
+
+        let project_border_style = if self.focused_panel == FocusedPanel::Projects {
+            Style::default().fg(Color::Yellow)
+        } else {
+            Style::default()
         };
 
         let projects_list = List::new(projects)
-            .block(Block::default().title(project_title).borders(Borders::ALL))
+            .block(
+                Block::default()
+                    .title(project_title)
+                    .borders(Borders::ALL)
+                    .border_style(project_border_style),
+            )
             .highlight_symbol("");
 
         f.render_widget(projects_list, main_chunks[0]);
@@ -670,19 +758,23 @@ impl App {
             .skip(start_idx)
             .take(end_idx - start_idx)
             .map(|log| {
-                let message_color = match log.level {
-                    crate::execution::LogLevel::Info => Color::White,
-                    crate::execution::LogLevel::Error => Color::Red,
-                    crate::execution::LogLevel::Debug => Color::DarkGray,
-                };
+                // Parse and colorize the log message
+                let colored_message = colorize_log_message(&log.message, &log.level);
 
-                ListItem::new(Line::from(vec![
+                let mut spans = vec![
                     Span::styled(&log.timestamp, Style::default().fg(Color::DarkGray)),
                     Span::raw(" "),
-                    Span::styled(&log.project, Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
+                    Span::styled(
+                        &log.project,
+                        Style::default()
+                            .fg(Color::Cyan)
+                            .add_modifier(Modifier::BOLD),
+                    ),
                     Span::raw(" │ "),
-                    Span::styled(&log.message, Style::default().fg(message_color)),
-                ]))
+                ];
+                spans.extend(colored_message);
+
+                ListItem::new(Line::from(spans))
             })
             .collect();
 
@@ -698,30 +790,48 @@ impl App {
             "0/0".to_string()
         };
 
+        let focused_indicator = if self.focused_panel == FocusedPanel::Logs {
+            "[FOCUSED - Tab: switch] "
+        } else {
+            "[Tab: switch] "
+        };
+
         let log_title = if let Some(ref filter) = self.filter_project {
             format!(
-                "Logs: {} [{}] {} - Ctrl+U/D: scroll, Home/End: jump, Enter: toggle",
-                filter,
-                scroll_indicator,
-                scroll_position
+                "Logs: {} {}{} {} - j/k or Ctrl+U/D: scroll, Enter: toggle",
+                filter, focused_indicator, scroll_indicator, scroll_position
             )
         } else {
             format!(
-                "Logs: All ({}) [{}] {} - Ctrl+U/D: scroll, PgUp/PgDn: page, Home/End: jump",
-                total_logs,
-                scroll_indicator,
-                scroll_position
+                "Logs: All ({}) {}{} {} - j/k or Ctrl+U/D: scroll",
+                total_logs, focused_indicator, scroll_indicator, scroll_position
             )
         };
 
-        let logs_list = List::new(logs).block(Block::default().title(log_title).borders(Borders::ALL));
+        let log_border_style = if self.focused_panel == FocusedPanel::Logs {
+            Style::default().fg(Color::Yellow)
+        } else {
+            Style::default()
+        };
+
+        let logs_list = List::new(logs).block(
+            Block::default()
+                .title(log_title)
+                .borders(Borders::ALL)
+                .border_style(log_border_style),
+        );
 
         f.render_widget(logs_list, main_chunks[1]);
 
         // Footer - update based on search mode
         let footer_spans = if self.search_mode {
             vec![
-                Span::styled("Search mode: ", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    "Search mode: ",
+                    Style::default()
+                        .fg(Color::Cyan)
+                        .add_modifier(Modifier::BOLD),
+                ),
                 Span::raw("type to search | "),
                 Span::styled("Enter", Style::default().fg(Color::Yellow)),
                 Span::raw(": select | "),
@@ -732,16 +842,14 @@ impl App {
             vec![
                 Span::styled("q", Style::default().fg(Color::Yellow)),
                 Span::raw(": quit | "),
+                Span::styled("Tab", Style::default().fg(Color::Yellow)),
+                Span::raw(": switch panel | "),
                 Span::styled("↑↓/jk", Style::default().fg(Color::Yellow)),
-                Span::raw(": nav | "),
-                Span::styled("Ctrl+U/D", Style::default().fg(Color::Yellow)),
-                Span::raw(": scroll | "),
+                Span::raw(": nav/scroll | "),
                 Span::styled("Enter", Style::default().fg(Color::Yellow)),
                 Span::raw(": filter | "),
                 Span::styled("e", Style::default().fg(Color::Yellow)),
                 Span::raw(": export | "),
-                Span::styled("x", Style::default().fg(Color::Yellow)),
-                Span::raw(": copy | "),
                 Span::styled("/", Style::default().fg(Color::Yellow)),
                 Span::raw(": search | "),
                 Span::styled("1-9", Style::default().fg(Color::Yellow)),
@@ -749,14 +857,159 @@ impl App {
             ]
         };
 
-        let footer = Paragraph::new(Line::from(footer_spans))
-            .block(Block::default().borders(Borders::ALL));
+        let footer =
+            Paragraph::new(Line::from(footer_spans)).block(Block::default().borders(Borders::ALL));
 
         f.render_widget(footer, chunks[2]);
     }
 }
 
-pub async fn run_tui_with_streaming(config: Config, log_rx: LogReceiver) -> Result<()> {
-    let mut app = App::new(config).with_log_receiver(log_rx);
+/// Colorize log message based on content patterns
+fn colorize_log_message<'a>(message: &'a str, level: &crate::execution::LogLevel) -> Vec<Span<'a>> {
+    let base_color = match level {
+        crate::execution::LogLevel::Info => Color::White,
+        crate::execution::LogLevel::Error => Color::Red,
+        crate::execution::LogLevel::Debug => Color::DarkGray,
+    };
+
+    let lower = message.to_lowercase();
+
+    // Check for success patterns
+    if lower.contains("compiled successfully")
+        || lower.contains("✓")
+        || lower.contains("✅")
+        || lower.contains("ready")
+        || lower.contains("listening on")
+        || lower.contains("server started")
+        || (lower.contains("compiled") && !lower.contains("error"))
+    {
+        return vec![Span::styled(message, Style::default().fg(Color::Green))];
+    }
+
+    // Check for error/warning patterns
+    if lower.contains("error")
+        || lower.contains("fail")
+        || lower.contains("panic")
+        || lower.contains("✗")
+        || lower.contains("❌")
+        || lower.contains("exception")
+    {
+        return vec![Span::styled(
+            message,
+            Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
+        )];
+    }
+
+    if lower.contains("warn") || lower.contains("⚠") {
+        return vec![Span::styled(
+            message,
+            Style::default()
+                .fg(Color::Yellow)
+                .add_modifier(Modifier::BOLD),
+        )];
+    }
+
+    // Check for URL patterns
+    if message.contains("http://") || message.contains("https://") {
+        let mut spans = Vec::new();
+        let mut last_end = 0;
+
+        for (start, _part) in message.match_indices("http") {
+            // Add text before URL
+            if start > last_end {
+                spans.push(Span::styled(
+                    &message[last_end..start],
+                    Style::default().fg(base_color),
+                ));
+            }
+
+            // Find end of URL (space or end of string)
+            let end = message[start..]
+                .find(' ')
+                .map(|i| start + i)
+                .unwrap_or(message.len());
+            spans.push(Span::styled(
+                &message[start..end],
+                Style::default()
+                    .fg(Color::Cyan)
+                    .add_modifier(Modifier::UNDERLINED),
+            ));
+            last_end = end;
+        }
+
+        // Add remaining text
+        if last_end < message.len() {
+            spans.push(Span::styled(
+                &message[last_end..],
+                Style::default().fg(base_color),
+            ));
+        }
+
+        return spans;
+    }
+
+    // Check for file paths
+    if message.contains(".rs")
+        || message.contains(".ts")
+        || message.contains(".js")
+        || message.contains(".tsx")
+    {
+        return vec![Span::styled(message, Style::default().fg(Color::Magenta))];
+    }
+
+    // Check for numbers (ports, sizes, etc)
+    if message.chars().any(|c| c.is_ascii_digit()) {
+        let mut spans = Vec::new();
+        let mut current = String::new();
+        let mut in_number = false;
+
+        for ch in message.chars() {
+            if ch.is_ascii_digit() || (in_number && (ch == '.' || ch == ':')) {
+                if !in_number {
+                    if !current.is_empty() {
+                        spans.push(Span::styled(
+                            current.clone(),
+                            Style::default().fg(base_color),
+                        ));
+                        current.clear();
+                    }
+                    in_number = true;
+                }
+                current.push(ch);
+            } else {
+                if in_number {
+                    spans.push(Span::styled(
+                        current.clone(),
+                        Style::default().fg(Color::Yellow),
+                    ));
+                    current.clear();
+                    in_number = false;
+                }
+                current.push(ch);
+            }
+        }
+
+        if !current.is_empty() {
+            if in_number {
+                spans.push(Span::styled(current, Style::default().fg(Color::Yellow)));
+            } else {
+                spans.push(Span::styled(current, Style::default().fg(base_color)));
+            }
+        }
+
+        return spans;
+    }
+
+    // Default: single span with base color
+    vec![Span::styled(message, Style::default().fg(base_color))]
+}
+
+pub async fn run_tui_with_streaming(
+    config: Config,
+    log_rx: LogReceiver,
+    status_rx: StatusReceiver,
+    process_rx: ProcessReceiver,
+) -> Result<()> {
+    let mut app = App::new(config).with_receivers(log_rx, status_rx, process_rx);
     app.run()
 }

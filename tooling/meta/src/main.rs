@@ -2,9 +2,9 @@ use anyhow::Result;
 use clap::Parser;
 use tracing::info;
 
+mod adapters;
 mod cli;
 mod config;
-mod adapters;
 mod execution;
 mod tui;
 
@@ -14,9 +14,7 @@ use config::Config;
 #[tokio::main]
 async fn main() -> Result<()> {
     // Initialize tracing
-    tracing_subscriber::fmt()
-        .with_target(false)
-        .init();
+    tracing_subscriber::fmt().with_target(false).init();
 
     let cli = Cli::parse();
 
@@ -44,15 +42,21 @@ async fn main() -> Result<()> {
             let config = Config::load()?;
             execution::test(&config, watch).await
         }
+        Commands::Run { task, projects } => {
+            info!("Running task: {}", task);
+            let config = Config::load()?;
+            execution::run_task(&config, &task, projects).await
+        }
         Commands::Tui => {
             info!("Launching TUI with live log streaming...");
             let config = Config::load()?;
 
             // Start dev servers with streaming
-            let log_rx = execution::dev_with_streaming(&config, None).await?;
+            let (log_rx, status_rx, process_rx) =
+                execution::dev_with_streaming(&config, None).await?;
 
-            // Run TUI with log receiver
-            tui::run_tui_with_streaming(config, log_rx).await
+            // Run TUI with log, status, and process receivers
+            tui::run_tui_with_streaming(config, log_rx, status_rx, process_rx).await
         }
     }
 }
