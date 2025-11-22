@@ -45,7 +45,12 @@ cargo run -- dev
 
 ### Standalone Installation
 
-**Want to use meta in your own project?** See the **[Standalone Installation Guide](../../docs/meta/STANDALONE.md)** for complete instructions on installing meta independently of this example monorepo.
+**Want to use meta in your own monorepo?** See the **[Standalone Installation Guide](./STANDALONE.md)** for complete instructions:
+
+- Installing meta from this repository
+- Copying meta to your project
+- Configuring meta.toml for your monorepo
+- Integration with your existing tools
 
 ## Quick Start
 
