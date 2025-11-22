@@ -28,9 +28,10 @@ on_change_strategy = "wait_then_restart"
 [jobs.run-long]
 command = ["cargo", "run", "--color", "always"]
 need_stdout = true
+background = false
 allow_warnings = true
 watch = ["src", "Cargo.toml", ".env"]
-on_change_strategy = "wait_then_restart"
+on_change_strategy = "kill_then_restart"
 # Long timeout for API server
 timeout = 3600
 
@@ -48,6 +49,13 @@ watch = ["src", "Cargo.toml"]
 command = ["cargo", "doc", "--color", "always", "--no-deps", "--open"]
 need_stdout = false
 watch = ["src", "Cargo.toml"]
+
+# Exports for meta integration
+[exports.meta-locations]
+# Export locations in structured format for meta to consume
+auto = true
+path = ".meta/bacon-locations"
+line_format = "{kind}|{path}:{line}:{column}|{message}"
 
 [keybindings]
 # Toggle backtrace on/off

@@ -38,18 +38,18 @@ type = "next"
 path = "apps/web"
 
 [projects.web.tasks]
-dev = { tool = "turborepo", command = "dev --filter=@rust-v1/web" }
-build = { tool = "turborepo", command = "build --filter=@rust-v1/web" }
-test = { tool = "turborepo", command = "test --filter=@rust-v1/web" }
+dev = { tool = "turborepo", command = "run dev --filter=@rust-v1/web" }
+build = { tool = "turborepo", command = "run build --filter=@rust-v1/web" }
+test = { tool = "turborepo", command = "run test --filter=@rust-v1/web" }
 
 [projects.app]
 type = "next"
 path = "apps/app"
 
 [projects.app.tasks]
-dev = { tool = "turborepo", command = "dev --filter=@rust-v1/app" }
-build = { tool = "turborepo", command = "build --filter=@rust-v1/app" }
-test = { tool = "turborepo", command = "test --filter=@rust-v1/app" }
+dev = { tool = "turborepo", command = "run dev --filter=@rust-v1/app" }
+build = { tool = "turborepo", command = "run build --filter=@rust-v1/app" }
+test = { tool = "turborepo", command = "run test --filter=@rust-v1/app" }
 
 # Meta tool itself - dogfooding!
 [projects.meta]

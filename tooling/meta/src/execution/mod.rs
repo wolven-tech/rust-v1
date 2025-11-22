@@ -54,55 +54,136 @@ pub type ProcessReceiver = mpsc::UnboundedReceiver<ProcessInfo>;
 pub async fn dev(config: &Config, projects: Option<Vec<String>>) -> Result<()> {
     let projects_to_run = get_projects_to_run(config, projects)?;
 
-    println!("🚀 Starting development servers...\n");
+    let mut commands = Vec::new();
 
-    let mut join_set = JoinSet::new();
+    println!("🚀 Development Commands:\n");
 
-    for (name, project) in projects_to_run {
+    for (name, project) in &projects_to_run {
         if let Some(dev_task) = project.tasks.get("dev") {
             let tool = config
                 .tools
                 .get(&dev_task.tool)
                 .ok_or_else(|| anyhow::anyhow!("Tool not found: {}", dev_task.tool))?;
 
-            let adapter = ToolAdapter::new(dev_task.tool.clone(), tool.command.clone());
             let command_str = dev_task.command.clone();
-            let project_name = name.clone();
-            let project_path = project.path.clone();
+            let project_path = &project.path;
 
-            println!("  → {} ({})", project_name, dev_task.tool);
+            // Turborepo runs from workspace root, other tools run from project directory
+            let full_command = if tool.command == "turbo" {
+                // Turbo runs from workspace root
+                format!("{} {}", tool.command, command_str)
+            } else {
+                // Other tools (bacon, cargo) run from project directory
+                format!("cd {} && {} {}", project_path, tool.command, command_str)
+            };
 
-            join_set.spawn(async move {
-                info!("Starting {} with command: {}", project_name, command_str);
+            commands.push((name.clone(), full_command.clone()));
 
-                // Parse command into args
-                let parts: Vec<&str> = command_str.split_whitespace().collect();
-
-                // Use project path for execution
-                let path = std::path::Path::new(&project_path);
-                match adapter.execute_in(&parts, path).await {
-                    Ok(_) => {
-                        info!("{} completed successfully", project_name);
-                        Ok(())
-                    }
-                    Err(e) => {
-                        error!("{} failed: {}", project_name, e);
-                        Err(e)
-                    }
-                }
-            });
+            println!("  {} [{}]: {}", name, dev_task.tool, full_command);
         }
     }
 
-    println!("\n⏳ Running... (press Ctrl+C to stop)\n");
+    if commands.is_empty() {
+        println!("\n⚠️  No dev tasks configured");
+        return Ok(());
+    }
 
-    // Wait for all tasks
-    while let Some(result) = join_set.join_next().await {
-        match result {
-            Ok(Ok(_)) => {}
-            Ok(Err(e)) => error!("Task error: {}", e),
-            Err(e) => error!("Join error: {}", e),
+    println!("\n💡 Launch Options:");
+    println!("  1. Manual: Run each command in a separate terminal");
+    println!("  2. Tmux: meta will launch all commands in tmux panes (recommended)\n");
+
+    // Auto-launch with tmux if available
+    let tmux_available = tokio::process::Command::new("tmux")
+        .arg("-V")
+        .output()
+        .await
+        .is_ok();
+
+    if tmux_available && commands.len() > 1 {
+        println!("✨ Launching tmux session with {} panes...\n", commands.len());
+        launch_tmux_session(&commands).await?;
+    } else if !tmux_available {
+        println!("⚠️  tmux not found. Install tmux to automatically launch all commands.");
+        println!("   For now, run these commands manually in separate terminals.");
+    } else {
+        // Only one command, just run it directly
+        println!("Running single command: {}\n", commands[0].1);
+        let parts: Vec<&str> = commands[0].1.split("&&").collect();
+        if parts.len() == 2 {
+            let dir = parts[0].trim().strip_prefix("cd ").unwrap_or(".");
+            let cmd_parts: Vec<&str> = parts[1].trim().split_whitespace().collect();
+            if !cmd_parts.is_empty() {
+                let mut cmd = tokio::process::Command::new(cmd_parts[0]);
+                cmd.args(&cmd_parts[1..]);
+                cmd.current_dir(dir);
+                cmd.stdout(std::process::Stdio::inherit());
+                cmd.stderr(std::process::Stdio::inherit());
+                cmd.stdin(std::process::Stdio::inherit());
+                let status = cmd.status().await?;
+                if !status.success() {
+                    anyhow::bail!("Command failed");
+                }
+            }
         }
+    }
+
+    Ok(())
+}
+
+async fn launch_tmux_session(commands: &[(String, String)]) -> Result<()> {
+    use tokio::process::Command;
+
+    let session_name = "meta-dev";
+
+    // Kill existing session if it exists
+    let _ = Command::new("tmux")
+        .args(&["kill-session", "-t", session_name])
+        .output()
+        .await;
+
+    // Create new session with first command
+    let first_cmd = &commands[0];
+    Command::new("tmux")
+        .args(&["new-session", "-d", "-s", session_name, "-n", &first_cmd.0])
+        .arg(&first_cmd.1)
+        .output()
+        .await?;
+
+    // Add remaining commands as new panes
+    for (name, cmd) in commands.iter().skip(1) {
+        Command::new("tmux")
+            .args(&["split-window", "-t", session_name, "-h"])
+            .arg(cmd)
+            .output()
+            .await?;
+
+        Command::new("tmux")
+            .args(&["select-pane", "-t", session_name, "-T", name])
+            .output()
+            .await?;
+    }
+
+    // Tile the panes evenly
+    Command::new("tmux")
+        .args(&["select-layout", "-t", session_name, "tiled"])
+        .output()
+        .await?;
+
+    // Attach to the session
+    println!("📺 Attaching to tmux session '{}'...", session_name);
+    println!("   Press Ctrl+B then D to detach");
+    println!("   Press Ctrl+C in each pane to stop that process\n");
+
+    let status = Command::new("tmux")
+        .args(&["attach-session", "-t", session_name])
+        .stdin(std::process::Stdio::inherit())
+        .stdout(std::process::Stdio::inherit())
+        .stderr(std::process::Stdio::inherit())
+        .status()
+        .await?;
+
+    if !status.success() {
+        anyhow::bail!("Failed to attach to tmux session");
     }
 
     Ok(())
