@@ -47,6 +47,75 @@ cargo run -- dev
 
 **Want to use meta in your own project?** See the **[Standalone Installation Guide](../../docs/meta/STANDALONE.md)** for complete instructions on installing meta independently of this example monorepo.
 
+## Quick Start
+
+### 1. Verify Installation
+
+Check that meta and your configuration are correct:
+
+```bash
+bun run meta:doctor
+```
+
+This will validate:
+- ✅ All tools (bacon, cargo, turbo, tmux) are installed
+- ✅ meta.toml configuration is valid
+- ✅ All project paths exist
+- ✅ Tasks are properly configured
+
+### 2. Start Development
+
+**Run all dev servers with tmux:**
+```bash
+bun run meta:dev
+```
+
+This launches a tmux session with separate panes for each project:
+- Each bacon instance runs with full interactive TUI
+- Each turbo process runs from workspace root
+- Press `Ctrl+B` then `D` to detach
+- Press `Ctrl+C` in each pane to stop
+
+**Run specific projects only:**
+```bash
+bun run meta:dev -- --projects api
+bun run meta:dev -- --projects web app
+```
+
+### 3. Run Tasks
+
+```bash
+# Run any task across all projects
+bun run meta -- run fmt
+bun run meta -- run clippy
+bun run meta -- run test
+
+# Run on specific projects
+bun run meta -- run test --projects api
+```
+
+## How It Works
+
+### Tmux Integration
+
+Meta uses **tmux** to run multiple bacon and turbo instances concurrently:
+
+1. **Detects tmux** - Automatically checks if tmux is installed
+2. **Creates session** - Launches `meta-dev` tmux session
+3. **Separate panes** - Each project gets its own pane:
+   - Bacon projects: `cd apps/api && bacon run-long`
+   - Turbo projects: `turbo run dev --filter=@package/name`
+4. **Full TUI** - Each bacon instance runs with complete interactivity
+5. **Easy navigation** - Use tmux keys to switch between panes
+
+### Tool Routing
+
+Meta automatically routes commands based on project type:
+
+- **Turborepo** → Runs from workspace root with `--filter`
+- **Bacon/Cargo** → Changes to project directory first
+- **Other tools** → Configurable in meta.toml
+
 ### Updating Meta
 
 ```bash

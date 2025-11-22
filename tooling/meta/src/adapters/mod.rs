@@ -38,28 +38,4 @@ impl ToolAdapter {
 
         Ok(())
     }
-
-    pub fn spawn_in(&self, args: &[&str], working_dir: &Path) -> Result<tokio::process::Child> {
-        let mut cmd = Command::new(&self.command);
-
-        // Bacon-specific: add --headless flag for non-interactive mode with output
-        if self.command == "bacon" {
-            // Insert --headless before the job name
-            cmd.arg("--headless");
-            cmd.args(args);
-        } else {
-            cmd.args(args);
-        }
-
-        cmd.current_dir(working_dir);
-        cmd.stdout(Stdio::piped());
-        cmd.stderr(Stdio::piped());
-
-        // Enable colored output
-        cmd.env("CARGO_TERM_COLOR", "always");
-        cmd.env("FORCE_COLOR", "1");
-
-        let child = cmd.spawn()?;
-        Ok(child)
-    }
 }

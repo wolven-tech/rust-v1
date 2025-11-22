@@ -57,7 +57,7 @@ type = "rust"
 path = "tooling/meta"
 
 [projects.meta.tasks]
-dev = { tool = "bacon", command = "check" }
+# No dev task - meta doesn't need to run during development
 build = { tool = "cargo", command = "build --release" }
 test = { tool = "cargo", command = "test --verbose" }
 fmt = { tool = "cargo", command = "fmt --all -- --check" }

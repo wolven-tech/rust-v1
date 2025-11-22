@@ -6,7 +6,6 @@ mod adapters;
 mod cli;
 mod config;
 mod execution;
-mod tui;
 
 use cli::{Cli, Commands};
 use config::Config;
@@ -47,16 +46,10 @@ async fn main() -> Result<()> {
             let config = Config::load()?;
             execution::run_task(&config, &task, projects).await
         }
-        Commands::Tui => {
-            info!("Launching TUI with live log streaming...");
+        Commands::Doctor => {
+            info!("Running diagnostics...");
             let config = Config::load()?;
-
-            // Start dev servers with streaming
-            let (log_rx, status_rx, process_rx) =
-                execution::dev_with_streaming(&config, None).await?;
-
-            // Run TUI with log, status, and process receivers
-            tui::run_tui_with_streaming(config, log_rx, status_rx, process_rx).await
+            execution::doctor(&config).await
         }
     }
 }

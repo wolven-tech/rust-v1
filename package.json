@@ -12,12 +12,12 @@
     "lint:repo": "bunx sherif@latest",
     "lint:repo:fix": "bunx sherif@latest --fix",
     "typecheck": "turbo typecheck",
-    "meta": "cd tooling/meta && cargo run --",
-    "meta:init": "cd tooling/meta && cargo run -- init",
-    "meta:dev": "cd tooling/meta && cargo run -- dev",
-    "meta:build": "cd tooling/meta && cargo run -- build",
-    "meta:test": "cd tooling/meta && cargo run -- test",
-    "meta:tui": "cd tooling/meta && cargo run -- tui"
+    "meta": "cargo run --manifest-path tooling/meta/Cargo.toml --",
+    "meta:init": "cargo run --manifest-path tooling/meta/Cargo.toml -- init",
+    "meta:dev": "cargo run --manifest-path tooling/meta/Cargo.toml -- dev",
+    "meta:build": "cargo run --manifest-path tooling/meta/Cargo.toml -- build",
+    "meta:test": "cargo run --manifest-path tooling/meta/Cargo.toml -- test",
+    "meta:doctor": "cargo run --manifest-path tooling/meta/Cargo.toml -- doctor"
   },
   "devDependencies": {
     "@biomejs/biome": "1.8.3",

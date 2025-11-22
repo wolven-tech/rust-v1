@@ -49,6 +49,6 @@ pub enum Commands {
         projects: Option<Vec<String>>,
     },
 
-    /// Interactive TUI mode (default)
-    Tui,
+    /// Validate meta.toml configuration and check tool availability
+    Doctor,
 }

@@ -1,55 +1,8 @@
 use std::collections::HashMap;
 
 use anyhow::Result;
-use tokio::{
-    io::{AsyncBufReadExt, BufReader},
-    sync::mpsc,
-    task::JoinSet,
-};
-use tracing::{error, info};
 
 use crate::{adapters::ToolAdapter, config::Config};
-
-#[derive(Clone, Debug)]
-pub struct LogMessage {
-    pub project: String,
-    pub message: String,
-    pub timestamp: String,
-    pub level: LogLevel,
-}
-
-#[derive(Clone, Debug)]
-pub struct StatusUpdate {
-    pub project: String,
-    pub status: ProcessStatus,
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub enum ProcessStatus {
-    Starting,
-    Running,
-    Success,
-    Failed,
-    Crashed,
-}
-
-#[derive(Clone, Debug)]
-pub enum LogLevel {
-    Info,
-    Error,
-    Debug,
-}
-
-pub type LogReceiver = mpsc::UnboundedReceiver<LogMessage>;
-pub type StatusReceiver = mpsc::UnboundedReceiver<StatusUpdate>;
-
-#[derive(Clone, Debug)]
-pub struct ProcessInfo {
-    pub project: String,
-    pub pid: u32,
-}
-
-pub type ProcessReceiver = mpsc::UnboundedReceiver<ProcessInfo>;
 
 pub async fn dev(config: &Config, projects: Option<Vec<String>>) -> Result<()> {
     let projects_to_run = get_projects_to_run(config, projects)?;
@@ -141,19 +94,26 @@ async fn launch_tmux_session(commands: &[(String, String)]) -> Result<()> {
         .output()
         .await;
 
+    // Wrap commands in a shell that keeps the pane alive after the command exits
+    let wrap_command = |cmd: &str| -> String {
+        format!("{}; echo '\\n✓ Process exited. Press Ctrl+C to close or Enter to restart.'; read -r; {}", cmd, cmd)
+    };
+
     // Create new session with first command
     let first_cmd = &commands[0];
+    let wrapped_first = wrap_command(&first_cmd.1);
     Command::new("tmux")
         .args(&["new-session", "-d", "-s", session_name, "-n", &first_cmd.0])
-        .arg(&first_cmd.1)
+        .arg(&wrapped_first)
         .output()
         .await?;
 
     // Add remaining commands as new panes
     for (name, cmd) in commands.iter().skip(1) {
+        let wrapped_cmd = wrap_command(cmd);
         Command::new("tmux")
             .args(&["split-window", "-t", session_name, "-h"])
-            .arg(cmd)
+            .arg(&wrapped_cmd)
             .output()
             .await?;
 
@@ -187,156 +147,6 @@ async fn launch_tmux_session(commands: &[(String, String)]) -> Result<()> {
     }
 
     Ok(())
-}
-
-pub async fn dev_with_streaming(
-    config: &Config,
-    projects: Option<Vec<String>>,
-) -> Result<(LogReceiver, StatusReceiver, ProcessReceiver)> {
-    let projects_to_run = get_projects_to_run(config, projects)?;
-    let (log_tx, log_rx) = mpsc::unbounded_channel();
-    let (status_tx, status_rx) = mpsc::unbounded_channel();
-    let (process_tx, process_rx) = mpsc::unbounded_channel();
-
-    let mut join_set = JoinSet::new();
-
-    for (name, project) in projects_to_run {
-        if let Some(dev_task) = project.tasks.get("dev") {
-            let tool = config
-                .tools
-                .get(&dev_task.tool)
-                .ok_or_else(|| anyhow::anyhow!("Tool not found: {}", dev_task.tool))?;
-
-            let adapter = ToolAdapter::new(dev_task.tool.clone(), tool.command.clone());
-            let command_str = dev_task.command.clone();
-            let project_name = name.clone();
-            let project_path = project.path.clone();
-            let log_tx_clone = log_tx.clone();
-            let status_tx_clone = status_tx.clone();
-            let process_tx_clone = process_tx.clone();
-
-            join_set.spawn(async move {
-                info!("Starting {} with command: {}", project_name, command_str);
-
-                // Send starting status
-                let _ = status_tx_clone.send(StatusUpdate {
-                    project: project_name.clone(),
-                    status: ProcessStatus::Starting,
-                });
-
-                // Parse command into args
-                let parts: Vec<&str> = command_str.split_whitespace().collect();
-                let parts_owned: Vec<String> = parts.iter().map(|s| s.to_string()).collect();
-
-                // Spawn process and capture output with working directory
-                let path = std::path::Path::new(&project_path);
-                match adapter.spawn_in(
-                    &parts_owned.iter().map(|s| s.as_str()).collect::<Vec<_>>(),
-                    path,
-                ) {
-                    Ok(mut child) => {
-                        // Send process ID for cleanup
-                        if let Some(pid) = child.id() {
-                            let _ = process_tx_clone.send(ProcessInfo {
-                                project: project_name.clone(),
-                                pid,
-                            });
-                        }
-
-                        // Send running status
-                        let _ = status_tx_clone.send(StatusUpdate {
-                            project: project_name.clone(),
-                            status: ProcessStatus::Running,
-                        });
-                        // Capture stdout
-                        if let Some(stdout) = child.stdout.take() {
-                            let project = project_name.clone();
-                            let tx = log_tx_clone.clone();
-                            tokio::spawn(async move {
-                                let reader = BufReader::new(stdout);
-                                let mut lines = reader.lines();
-                                while let Ok(Some(line)) = lines.next_line().await {
-                                    let level = detect_log_level(&line);
-                                    let _ = tx.send(LogMessage {
-                                        project: project.clone(),
-                                        message: line,
-                                        timestamp: chrono::Utc::now()
-                                            .format("%H:%M:%S")
-                                            .to_string(),
-                                        level,
-                                    });
-                                }
-                            });
-                        }
-
-                        // Capture stderr
-                        if let Some(stderr) = child.stderr.take() {
-                            let project = project_name.clone();
-                            let tx = log_tx_clone.clone();
-                            tokio::spawn(async move {
-                                let reader = BufReader::new(stderr);
-                                let mut lines = reader.lines();
-                                while let Ok(Some(line)) = lines.next_line().await {
-                                    let _ = tx.send(LogMessage {
-                                        project: project.clone(),
-                                        message: line,
-                                        timestamp: chrono::Utc::now()
-                                            .format("%H:%M:%S")
-                                            .to_string(),
-                                        level: LogLevel::Error,
-                                    });
-                                }
-                            });
-                        }
-
-                        // Wait for process to complete
-                        match child.wait().await {
-                            Ok(exit_status) => {
-                                if exit_status.success() {
-                                    info!("{} completed successfully", project_name);
-                                    let _ = status_tx_clone.send(StatusUpdate {
-                                        project: project_name.clone(),
-                                        status: ProcessStatus::Success,
-                                    });
-                                } else {
-                                    error!("{} exited with status: {}", project_name, exit_status);
-                                    let _ = status_tx_clone.send(StatusUpdate {
-                                        project: project_name.clone(),
-                                        status: ProcessStatus::Failed,
-                                    });
-                                }
-                            }
-                            Err(e) => {
-                                error!("{} wait error: {}", project_name, e);
-                                let _ = status_tx_clone.send(StatusUpdate {
-                                    project: project_name.clone(),
-                                    status: ProcessStatus::Crashed,
-                                });
-                            }
-                        }
-                    }
-                    Err(e) => {
-                        error!("Failed to spawn {}: {}", project_name, e);
-                        let _ = status_tx_clone.send(StatusUpdate {
-                            project: project_name.clone(),
-                            status: ProcessStatus::Failed,
-                        });
-                    }
-                }
-
-                Ok::<(), anyhow::Error>(())
-            });
-        }
-    }
-
-    // Spawn a task to wait for all processes
-    tokio::spawn(async move {
-        while let Some(_result) = join_set.join_next().await {
-            // Process results if needed
-        }
-    });
-
-    Ok((log_rx, status_rx, process_rx))
 }
 
 pub async fn build(config: &Config, _prod: bool, projects: Option<Vec<String>>) -> Result<()> {
@@ -452,36 +262,131 @@ fn get_projects_to_run(
 
     Ok(result)
 }
+pub async fn doctor(config: &Config) -> Result<()> {
+    println!("🏥 Meta Doctor - Configuration Diagnostics\n");
+    println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
 
-/// Detect log level based on message content with enhanced pattern matching
-fn detect_log_level(message: &str) -> LogLevel {
-    let lower = message.to_lowercase();
+    let mut errors = 0;
+    let mut warnings = 0;
 
-    // Check for error patterns - prioritize these
-    if lower.contains("error")
-        || lower.contains("fail")
-        || lower.contains("panic")
-        || lower.contains("fatal")
-        || lower.contains("✗")
-        || lower.contains("❌")
-        || lower.contains("exception")
-        || lower.contains("crashed")
-        || lower.contains("segfault")
-        || lower.contains("abort")
+    // Check meta.toml exists and is valid
+    println!("📋 Configuration File:");
+    println!("  ✓ meta.toml loaded successfully");
+    println!("  ✓ Workspace: {}\n", config.workspace.name);
+
+    // Check tools
+    println!("🔧 Tool Availability:");
+    for (tool_name, tool_config) in &config.tools {
+        if !tool_config.enabled {
+            println!("  ⊘ {} (disabled)", tool_name);
+            continue;
+        }
+
+        match tokio::process::Command::new(&tool_config.command)
+            .arg("--version")
+            .output()
+            .await
+        {
+            Ok(output) if output.status.success() => {
+                let version_str = String::from_utf8_lossy(&output.stdout);
+                let version = version_str
+                    .lines()
+                    .next()
+                    .unwrap_or("unknown")
+                    .trim();
+                println!("  ✓ {} → {} ({})", tool_name, tool_config.command, version);
+            }
+            Ok(_) => {
+                println!("  ⚠ {} → {} (found but version check failed)", tool_name, tool_config.command);
+                warnings += 1;
+            }
+            Err(_) => {
+                println!("  ✗ {} → {} (NOT FOUND)", tool_name, tool_config.command);
+                errors += 1;
+            }
+        }
+    }
+
+    // Check tmux for multi-process support
+    println!("\n🖥️  Terminal Multiplexer:");
+    match tokio::process::Command::new("tmux")
+        .arg("-V")
+        .output()
+        .await
     {
-        return LogLevel::Error;
+        Ok(output) if output.status.success() => {
+            let version = String::from_utf8_lossy(&output.stdout).trim().to_string();
+            println!("  ✓ tmux → {} (multi-process dev mode available)", version);
+        }
+        _ => {
+            println!("  ⚠ tmux not found (install for 'meta dev' multi-process mode)");
+            println!("    Install: brew install tmux (macOS) or apt install tmux (Linux)");
+            warnings += 1;
+        }
     }
 
-    // Check for warning patterns
-    if lower.contains("warn") || lower.contains("warning") || lower.contains("⚠") {
-        return LogLevel::Error; // Treat warnings as errors for visibility
+    // Check projects
+    println!("\n📦 Projects ({}):", config.projects.len());
+    for (name, project) in &config.projects {
+        let path = std::path::Path::new(&project.path);
+        if path.exists() {
+            println!("  ✓ {} → {} ({})", name, project.path, project.project_type);
+
+            // Check if project has dev task
+            if project.tasks.get("dev").is_some() {
+                println!("    • dev task configured");
+            }
+        } else {
+            println!("  ✗ {} → {} (PATH NOT FOUND)", name, project.path);
+            errors += 1;
+        }
     }
 
-    // Check for debug/trace patterns
-    if lower.contains("debug") || lower.contains("trace") || lower.contains("verbose") {
-        return LogLevel::Debug;
+    // Check for common issues
+    println!("\n🔍 Configuration Validation:");
+
+    // Validate turborepo commands
+    for (name, project) in &config.projects {
+        if let Some(dev_task) = project.tasks.get("dev") {
+            if dev_task.tool == "turborepo" {
+                let cmd = &dev_task.command;
+                if !cmd.starts_with("run ") {
+                    println!("  ⚠ {} dev task should start with 'run': '{}'", name, cmd);
+                    println!("    Suggested: 'run dev --filter=...'");
+                    warnings += 1;
+                }
+                if !cmd.contains("--filter=") {
+                    println!("  ⚠ {} turbo task missing --filter flag: '{}'", name, cmd);
+                    warnings += 1;
+                }
+            }
+        }
     }
 
-    // Default to Info
-    LogLevel::Info
+    // Summary
+    println!("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    println!("\n📊 Summary:");
+
+    if errors == 0 && warnings == 0 {
+        println!("  🎉 All checks passed! Meta is ready to use.");
+        println!("\n💡 Quick Start:");
+        println!("  • Run 'meta dev' to start all development servers");
+        println!("  • Run 'meta dev --projects api' to start specific project");
+        println!("  • Run 'meta run <task>' to execute any task across projects");
+    } else {
+        if errors > 0 {
+            println!("  ✗ {} error(s) found - these must be fixed", errors);
+        }
+        if warnings > 0 {
+            println!("  ⚠ {} warning(s) - meta will work but with reduced functionality", warnings);
+        }
+    }
+
+    println!();
+
+    if errors > 0 {
+        anyhow::bail!("Configuration has errors");
+    }
+
+    Ok(())
 }
