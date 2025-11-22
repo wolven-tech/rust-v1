@@ -1,10 +1,16 @@
 [package]
-name = "meta"
+name = "monorepo-meta"
 version = "0.2.1"
 edition = "2021"
 authors = ["Meta Team"]
 description = "Meta task orchestrator for monorepos - unified TUI for Turborepo, moon, bacon"
 license = "MIT"
+repository = "https://github.com/wolven-tech/rust-v1"
+homepage = "https://github.com/wolven-tech/rust-v1"
+documentation = "https://github.com/wolven-tech/rust-v1/tree/main/tooling/meta"
+keywords = ["monorepo", "task-runner", "orchestrator", "turborepo", "cli"]
+categories = ["command-line-utilities", "development-tools"]
+readme = "README.md"
 
 [[bin]]
 name = "meta"
