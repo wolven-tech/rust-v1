@@ -4,6 +4,8 @@
 
 **Meta** is a unified task orchestrator for modern monorepos. Stop juggling Turborepo, cargo, and bacon commands - let meta orchestrate multiple bacon instances and turborepo tasks in tmux automatically.
 
+[![asciicast](https://asciinema.org/a/N9NaULQ470ih2SV6aymeENmLq.svg)](https://asciinema.org/a/N9NaULQ470ih2SV6aymeENmLq)
+
 **📦 Portable:** This directory is self-contained and can be copied to any monorepo. Just run `./install.sh` to get started!
 
 ## Why Meta?
@@ -284,7 +286,20 @@ meta doctor
 # ✓ Quick start suggestions
 ```
 
-## Recording Demos
+## Demo
+
+See Meta in action:
+
+[![asciicast](https://asciinema.org/a/N9NaULQ470ih2SV6aymeENmLq.svg)](https://asciinema.org/a/N9NaULQ470ih2SV6aymeENmLq)
+
+**Demo showcases:**
+- `meta doctor` - Configuration validation
+- `meta dev` - Tmux session launch with multiple bacon instances
+- Tmux navigation - Full interactive bacon TUI per project
+- Turborepo integration - Workspace-aware execution
+- Detach/reattach - Keep dev servers running in background
+
+## Recording Your Own Demos
 
 Want to create a demo of Meta for documentation or social media?
 
@@ -296,19 +311,6 @@ cd ../../docs/launch  # From meta directory
 ```
 
 See [docs/launch/DEMO_SCRIPT.md](../../docs/launch/DEMO_SCRIPT.md) for detailed recording instructions.
-
-**What gets recorded:**
-1. `meta doctor` - Configuration validation
-2. `meta dev` - Tmux session launch with navigation guide
-3. Tmux navigation - Switch between bacon and turbo panes
-4. Zoom/detach features - Professional workflow
-5. Clean exit
-
-The demo showcases:
-- Multiple bacon instances with full interactive TUIs
-- Turborepo running from workspace root
-- Tmux keyboard navigation
-- Detach/reattach capability
 
 ## Architecture
 

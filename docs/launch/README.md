@@ -2,6 +2,14 @@
 
 This directory contains everything you need to launch and announce the rust-v1 monorepo and Meta orchestrator on social media.
 
+## Demo Video
+
+Watch the official demo:
+
+[![asciicast](https://asciinema.org/a/N9NaULQ470ih2SV6aymeENmLq.svg)](https://asciinema.org/a/N9NaULQ470ih2SV6aymeENmLq)
+
+Use this video in your social media posts!
+
 ## Quick Start
 
 1. **Record the demo:**

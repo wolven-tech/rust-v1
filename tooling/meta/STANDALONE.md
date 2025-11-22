@@ -2,6 +2,12 @@
 
 This guide shows you how to use **meta** in your own monorepo project.
 
+## Demo
+
+See Meta in action:
+
+[![asciicast](https://asciinema.org/a/N9NaULQ470ih2SV6aymeENmLq.svg)](https://asciinema.org/a/N9NaULQ470ih2SV6aymeENmLq)
+
 ## What is Meta?
 
 Meta is a **monorepo task orchestrator** that launches multiple bacon and turborepo instances simultaneously in tmux, giving you:

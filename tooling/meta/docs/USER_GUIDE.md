@@ -2,6 +2,12 @@
 
 Complete guide to using Meta for monorepo development orchestration.
 
+## Demo
+
+See Meta in action:
+
+[![asciicast](https://asciinema.org/a/N9NaULQ470ih2SV6aymeENmLq.svg)](https://asciinema.org/a/N9NaULQ470ih2SV6aymeENmLq)
+
 ## Table of Contents
 
 - [Getting Started](#getting-started)

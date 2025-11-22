@@ -48,6 +48,8 @@ That's Meta.
 
 ⚠️ **Early access warning:** Still in active development (v0.2.1). Core is solid, but we're adding features. Use it, break it, tell me what's missing.
 
+**Demo:** https://asciinema.org/a/N9NaULQ470ih2SV6aymeENmLq
+
 GitHub: https://github.com/wolven-tech/rust-v1
 
 Quick start:
@@ -120,6 +122,8 @@ But now you can run multiple projects + Next.js apps at once.
 **Tweet 5:**
 v0.2.1 is live: https://github.com/wolven-tech/rust-v1
 
+Watch the demo: https://asciinema.org/a/N9NaULQ470ih2SV6aymeENmLq
+
 ⚠️ Still early. Core is solid but features are coming.
 
 If you tried the old TUI version - this is the real deal.
@@ -143,7 +147,8 @@ One command: `meta dev`
 
 Better. Simpler. Faster.
 
-https://github.com/wolven-tech/rust-v1
+Watch demo: https://asciinema.org/a/N9NaULQ470ih2SV6aymeENmLq
+GitHub: https://github.com/wolven-tech/rust-v1
 
 ---
 
