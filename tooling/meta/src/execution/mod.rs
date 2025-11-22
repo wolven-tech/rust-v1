@@ -131,8 +131,17 @@ async fn launch_tmux_session(commands: &[(String, String)]) -> Result<()> {
 
     // Attach to the session
     println!("📺 Attaching to tmux session '{}'...", session_name);
-    println!("   Press Ctrl+B then D to detach");
-    println!("   Press Ctrl+C in each pane to stop that process\n");
+    println!("\n╭─────────────────────────────────────────────────────────╮");
+    println!("│ 🎮 Tmux Navigation Guide                                │");
+    println!("├─────────────────────────────────────────────────────────┤");
+    println!("│ Navigate Panes:  Ctrl+B then Arrow Keys (← → ↑ ↓)      │");
+    println!("│ Zoom Pane:       Ctrl+B then Z (toggle full screen)    │");
+    println!("│ Show Numbers:    Ctrl+B then Q (then press number)     │");
+    println!("│                                                         │");
+    println!("│ Detach Session:  Ctrl+B then D (keeps running)         │");
+    println!("│ Stop Process:    Ctrl+C (in current pane)              │");
+    println!("│ Close Pane:      Ctrl+B then X (confirm with y)        │");
+    println!("╰─────────────────────────────────────────────────────────╯\n");
 
     let status = Command::new("tmux")
         .args(&["attach-session", "-t", session_name])
