@@ -1,8 +1,8 @@
 # Meta - Monorepo Task Orchestrator
 
-> One TUI to rule them all 🚀
+> One command to rule them all 🚀
 
-**Meta** is a unified task orchestrator for modern monorepos. Stop juggling Turborepo, cargo, and bacon commands - let meta route tasks to the right tools automatically.
+**Meta** is a unified task orchestrator for modern monorepos. Stop juggling Turborepo, cargo, and bacon commands - let meta orchestrate multiple bacon instances and turborepo tasks in tmux automatically.
 
 **📦 Portable:** This directory is self-contained and can be copied to any monorepo. Just run `./install.sh` to get started!
 
@@ -22,13 +22,15 @@ Modern monorepos use **multiple specialized tools**:
 
 - ✅ **Smart Routing** - Automatically selects the right tool for each project
 - ✅ **Unified CLI** - One command for all tasks (`meta dev`, `meta build`, `meta test`)
-- ✅ **Parallel Execution** - Run multiple projects concurrently
+- ✅ **Multiple Bacon TUIs** - Each Rust project gets full interactive bacon TUI in its own pane
+- ✅ **Tmux Orchestration** - All processes in separate panes with native terminal access
+- ✅ **Turborepo Integration** - Workspace-aware task execution from root directory
 - ✅ **Zero Config** - Works with sensible defaults, configurable via `meta.toml`
-- ✅ **TUI Interface** - Beautiful terminal UI with Ratatui
-- ✅ **Log Streaming** - Real-time log aggregation with filtering
-- ✅ **Log Filtering** - Filter logs by project with color-coded output
-- 🚧 **Watch Mode** - Auto-restart on changes (coming soon)
-- 🚧 **Metrics** - Task execution insights (coming soon)
+- ✅ **Built-in Validation** - `meta doctor` checks your entire setup
+- ✅ **Detach/Reattach** - Keep dev servers running in background
+- ✅ **Hot Reload Built-in** - Bacon and Turbo handle file watching natively
+- 🚧 **Session Management** - Save/restore pane layouts (coming soon)
+- 🚧 **Multi-Environment** - Support for dev, staging, prod configs (coming soon)
 
 ## Installation
 
@@ -53,6 +55,8 @@ cargo run -- dev
 - Integration with your existing tools
 
 ## Quick Start
+
+> **📖 New to Meta?** See the complete [User Guide](docs/USER_GUIDE.md) for detailed instructions, tmux navigation tips, and recording demos.
 
 ### 1. Verify Installation
 
@@ -259,27 +263,52 @@ meta run fmt-fix
 - `audit` - Security vulnerability audit
 - `check` - Fast compile check without building
 
-### `meta tui`
-Launch interactive TUI mode with real-time log streaming.
+### `meta doctor`
+Validate your entire setup before starting development.
 
-**Features:**
-- Real-time log aggregation from all running projects
-- Color-coded logs (white for info, red for errors)
-- Filter logs by project (press `Enter` on a project)
-- Clear logs (press `c`)
-- Show all logs (press `a`)
-- Keyboard navigation (↑/↓ or j/k)
+**Checks:**
+- All required tools are installed (bacon, cargo, turbo, tmux)
+- meta.toml configuration is valid
+- All project paths exist
+- Tasks are properly configured
+- Turborepo command syntax is correct
 
 **Example:**
 ```bash
-meta tui
+meta doctor
 
-# The TUI will:
-# 1. Start all dev servers
-# 2. Display project status in left panel
-# 3. Stream logs in real-time to right panel
-# 4. Allow filtering by selecting a project
+# Output shows:
+# ✓ Tool availability with versions
+# ✓ Project validation
+# ✓ Configuration validation
+# ✓ Quick start suggestions
 ```
+
+## Recording Demos
+
+Want to create a demo of Meta for documentation or social media?
+
+**Quick start:**
+```bash
+cd ../../docs/launch  # From meta directory
+./record-demo.sh      # Record with asciinema
+./convert-to-gif.sh   # Convert to GIF
+```
+
+See [docs/launch/DEMO_SCRIPT.md](../../docs/launch/DEMO_SCRIPT.md) for detailed recording instructions.
+
+**What gets recorded:**
+1. `meta doctor` - Configuration validation
+2. `meta dev` - Tmux session launch with navigation guide
+3. Tmux navigation - Switch between bacon and turbo panes
+4. Zoom/detach features - Professional workflow
+5. Clean exit
+
+The demo showcases:
+- Multiple bacon instances with full interactive TUIs
+- Turborepo running from workspace root
+- Tmux keyboard navigation
+- Detach/reattach capability
 
 ## Architecture
 
@@ -289,8 +318,7 @@ meta/
 │   ├── cli.rs         # CLI parsing (clap)
 │   ├── config.rs      # meta.toml loading
 │   ├── adapters/      # Tool adapters
-│   ├── execution/     # Task execution
-│   └── tui/           # TUI interface (future)
+│   └── execution/     # Task execution & tmux orchestration
 ├── Cargo.toml
 └── README.md
 ```
@@ -299,16 +327,17 @@ meta/
 
 1. **Read Configuration** - Load `meta.toml`
 2. **Smart Routing** - Match tasks to appropriate tools
-3. **Parallel Execution** - Run tasks concurrently with tokio
-4. **Stream Output** - Show logs from all processes
+3. **Tmux Orchestration** - Create session with separate panes for each process
+4. **Tool-Aware Execution** - Turbo from workspace root, bacon from project directories
+5. **Native Process Execution** - Each process runs with full TTY access
 
 ## Comparison
 
 | Tool | Purpose | Meta Advantage |
 |------|---------|----------------|
-| **Taskfile** | Task runner | TUI, smart routing, no manual orchestration |
-| **Turborepo** | JS/TS monorepo | Multi-language support (Rust + TS) |
-| **Just** | Command runner | Better for complex monorepos |
+| **mprocs/overmind** | Process orchestrator | Native TTY per process, bacon TUI support, tool-aware routing |
+| **Turborepo** | JS/TS monorepo | Multi-language support (Rust + TS), proper bacon integration |
+| **Just/Taskfile** | Task runner | Tmux orchestration, detach/reattach, validation |
 
 ## Roadmap
 
@@ -319,25 +348,25 @@ meta/
 - [x] Task routing
 - [x] Parallel execution
 
-### v0.2.0 (Current) ✅
-- [x] TUI dashboard (Ratatui)
-- [x] Real-time log streaming
-- [x] Log filtering by project
-- [x] Color-coded log output
-- [ ] Watch mode
-- [ ] Task history
+### v0.2.1 (Current) ✅
+- [x] Tmux orchestration
+- [x] Multiple bacon instances with full TUI
+- [x] Turborepo workspace integration
+- [x] Built-in validation (doctor command)
+- [x] Detach/reattach support
+- [x] Tool-aware routing
 
 ### v0.3.0 (Next)
-- [ ] Auto-restart on file changes
-- [ ] Enhanced task status tracking
-- [ ] Log search and pattern matching
-- [ ] Save/export logs
+- [ ] Session management (save/restore pane layouts)
+- [ ] Custom pane titles from meta.toml
+- [ ] Multiple environment support (dev, staging, prod)
+- [ ] Project dependency awareness (start in order)
 
-### v0.3.0 (Future)
-- [ ] Remote execution (SSH)
-- [ ] Metrics and insights
-- [ ] Plugin system
-- [ ] CI/CD integration
+### Future
+- [ ] Remote execution (SSH to dev servers)
+- [ ] Task execution metrics
+- [ ] Custom tool adapters via plugins
+- [ ] Integration with CI/CD pipelines
 
 ## Development
 

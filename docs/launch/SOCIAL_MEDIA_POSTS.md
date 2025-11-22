@@ -1,62 +1,66 @@
-# Social Media Launch Posts
+# Social Media Update Posts - Meta v0.2.1
 
 ## LinkedIn Version
 
 ---
 
-I spent 6 months wrestling with monorepo tooling.
+Remember Meta, the monorepo orchestrator I shared a while back?
 
-Running multiple services meant:
-- 5 terminal tabs open
-- Logs mixed together
-- No idea which service failed
-- 10+ commands just to start dev
+I just shipped v0.2.1 with a complete architectural pivot.
 
-So I built something better.
+**The problem with the old approach:**
+- I was trying to capture bacon's output
+- Lost the interactive TUI that makes bacon amazing
+- Fighting against how the tool was designed to work
 
-**Introducing Meta** - a Rust-powered orchestrator for modern monorepos.
+**The realization:**
+Stop fighting. Start orchestrating.
 
-One command. One dashboard. Real-time color-coded logs.
+**What's new in v0.2.1:**
+
+🥓 **Multiple Bacon TUIs** - Each Rust project gets its own bacon instance with FULL interactive TUI (no more output capture)
+
+🖥️ **Tmux Orchestration** - Each process runs in its own pane with native terminal access
+
+⚡ **Turborepo Integration** - Proper workspace-aware execution from the root
+
+✅ **Built-in Validation** - `meta doctor` checks your entire setup before you start
+
+The workflow is dead simple:
 
 ```bash
-meta tui
+meta doctor  # Validate everything
+meta dev     # Launch tmux with all services
 ```
 
-That's it.
+Then use tmux shortcuts to navigate:
+- `Ctrl+B` + arrows to switch between panes
+- `Ctrl+B` + Z to zoom into one service
+- `Ctrl+B` + D to detach (keeps running)
 
-Here's what makes it different:
+Each bacon instance runs with its full TUI. You can interact with it just like running bacon directly. No hacks, no output parsing, no fighting the ecosystem.
 
-🎨 **Color-coded logs** - Spot errors instantly (red = bad, white = info)
-🔍 **Smart filtering** - Focus on one service with a keypress
-⚡ **Blazingly fast** - 5MB memory, 3000+ lines/sec throughput
-🎯 **Zero config** - Works out of the box
-📊 **TUI dashboard** - Visual feedback for all your services
+**Why this matters:**
 
-The best part?
+Bacon is designed to BE the orchestrator for Rust. But in a monorepo with Next.js apps too? You need something that coordinates multiple bacon instances AND turborepo tasks.
 
-It's not just for Rust projects. Works with Next.js, Node, Python, anything.
+That's Meta.
 
-We've open-sourced the full monorepo template:
-- Rust API (Axum + Clean Architecture)
-- Next.js apps (Marketing + Application)
-- Meta orchestrator with TUI
-- 8 shared packages ready to use
+⚠️ **Early access warning:** Still in active development (v0.2.1). Core is solid, but we're adding features. Use it, break it, tell me what's missing.
 
-⚠️ **Early access warning:** Meta just hit v0.2.0. The core is solid, but we're still adding features. Use it, break it, tell us what's missing.
-
-Check it out: https://github.com/wolven-tech/rust-v1
+GitHub: https://github.com/wolven-tech/rust-v1
 
 Quick start:
 ```bash
 bunx degit wolven-tech/rust-v1 my-project
 cd my-project && bun install
 cd tooling/meta && ./install.sh && cd ../..
-meta tui
+meta dev
 ```
 
-What's your biggest pain point with monorepo development?
+For those who tried the old TUI version - this is way better. Each tool gets its own space with full interactivity.
 
-(Drop a comment - I read every one)
+What do you think of this approach?
 
 ---
 
@@ -65,71 +69,62 @@ What's your biggest pain point with monorepo development?
 ---
 
 **Tweet 1:**
-I spent 6 months fighting monorepo tooling hell.
+Meta v0.2.1 just dropped with a complete rewrite.
 
-Multiple services = terminal chaos.
+Old approach: Capture bacon output in a TUI
+New approach: Orchestrate multiple bacon instances in tmux
 
-So I built Meta - a Rust-powered orchestrator with a TUI dashboard.
+Why? Because fighting bacon is stupid. It's already a TUI. Let it be one.
 
-One command to rule them all:
-`meta tui`
-
-Just dropped v0.2.0 ↓
+Thread ↓
 
 ---
 
 **Tweet 2:**
-What makes Meta different:
+What changed:
 
-🎨 Color-coded logs (spot errors instantly)
-🔍 Filter by service (press Enter)
-⚡ 5MB memory, 3000+ lines/sec
-🎯 Zero config
-📊 Real-time TUI dashboard
+🥓 Each Rust project = its own bacon instance with FULL TUI
+🖥️ Tmux gives each process its own pane
+⚡ Turborepo runs from workspace root (proper --filter)
+✅ meta doctor validates your setup
 
-All in one ~3MB binary.
+One command: `meta dev`
+
+All processes running natively.
 
 ---
 
 **Tweet 3:**
-It's not just for Rust.
+The old version tried to be smart.
+Capture output. Parse logs. Build a dashboard.
 
-Works with:
-- Next.js / Node
-- Python / Django
-- Go services
-- Anything with a CLI
+The new version is smarter.
+Use tmux. Give each process a pane. Let bacon be bacon.
 
-If it runs in a terminal, Meta can orchestrate it.
+Sometimes the best solution is the simple one.
 
 ---
 
 **Tweet 4:**
-We open-sourced the full template:
+For Rust devs:
 
-✅ Rust API (Axum)
-✅ Next.js apps
-✅ Meta orchestrator
-✅ 8 shared packages
-✅ Production-ready
+Each bacon instance runs exactly like you'd run it manually.
+Full keyboard interaction.
+Switch jobs (t for test, c for clippy).
+All the TUI goodness.
 
-Scaffold in 30 seconds:
-`bunx degit wolven-tech/rust-v1 my-project`
-
-https://github.com/wolven-tech/rust-v1
+But now you can run multiple projects + Next.js apps at once.
 
 ---
 
 **Tweet 5:**
-⚠️ Fair warning:
+v0.2.1 is live: https://github.com/wolven-tech/rust-v1
 
-Meta just hit v0.2.0. Core is solid, but we're still adding features.
+⚠️ Still early. Core is solid but features are coming.
 
-Use it. Break it. Tell us what's missing.
+If you tried the old TUI version - this is the real deal.
 
-Early adopters shape the roadmap.
-
-What feature would you want first?
+What feature should I add next?
 
 ---
 
@@ -137,42 +132,18 @@ What feature would you want first?
 
 ---
 
-Just shipped Meta v0.2.0 - a Rust-powered monorepo orchestrator with TUI dashboard
+Meta v0.2.1: Complete rewrite
 
-One command. One view. All your services.
+Old: Custom TUI capturing bacon output
+New: Tmux orchestration with native bacon TUIs
 
-🎨 Color-coded logs
-🔍 Smart filtering
-⚡ 5MB memory
-📊 Real-time updates
+Each Rust project gets full interactive bacon.
+Turborepo runs from workspace root.
+One command: `meta dev`
 
-Open source template: https://github.com/wolven-tech/rust-v1
+Better. Simpler. Faster.
 
-⚠️ Early access - help us shape it
-
----
-
-## Instagram/Visual Platform Caption
-
----
-
-Meta v0.2.0 is live 🚀
-
-Your monorepo command center:
-→ One TUI dashboard
-→ Color-coded logs
-→ Real-time filtering
-→ Built in Rust
-
-`meta tui` and you're done.
-
-⚠️ Just released - early adopters welcome
-
-Open source at github.com/wolven-tech/rust-v1
-
-What's your monorepo pain point? 👇
-
-#rust #webdev #opensource #developer #programming #monorepo #devtools
+https://github.com/wolven-tech/rust-v1
 
 ---
 
@@ -193,28 +164,35 @@ What's your monorepo pain point? 👇
    ```
    This will install `agg` if needed and create `meta-demo.gif`
 
-### What Gets Recorded (20-30 seconds)
+### What Gets Recorded (30-35 seconds)
 
-1. Meta TUI loading (3s)
-2. Navigate between services with arrow keys (5s)
-3. Filter logs for one service with Enter (3s)
-4. Show all logs with 'a' (2s)
-5. Clear buffer with 'c' (2s)
-6. Navigate again to show responsiveness (2s)
-7. Quit gracefully with 'q' (2s)
+1. meta doctor - Configuration validation (5s)
+2. meta dev - Launch tmux session (3s)
+3. Navigate between panes with Ctrl+B + arrows (8s)
+4. Zoom a pane to show full bacon TUI (3s)
+5. Show pane numbers (2s)
+6. Detach from session (3s)
+7. Reattach to session (2s)
+8. Stop a service (3s)
+9. Exit cleanly (2s)
 
 **Key Visual Elements:**
-- Fast startup time
-- Color-coded logs (red errors, white info)
-- Smooth keyboard navigation
-- Real-time streaming
-- Professional UI
+- Fast validation with meta doctor
+- Instant tmux session launch
+- Multiple bacon TUIs running simultaneously
+- Turborepo dev servers running from workspace root
+- Helpful navigation guide on startup
+- Smooth keyboard navigation between panes
+- Detach/reattach capability
+- Professional multi-pane layout
 
 ### Detailed Recording Guide
 
 See `DEMO_SCRIPT.md` for:
 - Step-by-step recording instructions
 - Timing guidelines for each action
+- Tmux keyboard shortcuts reference
+- Meta commands reference
 - Tips for best results
 - Troubleshooting
 
@@ -235,6 +213,89 @@ Use 3-5 max, placed at the end:
 Use sparingly (1-2), only if relevant:
 #rustlang #webdev
 
-**Instagram:**
-Use more (10-15):
-#rust #webdev #opensource #programming #developer #devtools #monorepo #nextjs #typescript #fullstack #coding #softwaredevelopment #tech #buildInpublic #indiedev
+---
+
+## Key Messaging Points - The Pivot Story
+
+When discussing Meta v0.2.1, emphasize the learning journey:
+
+### The Old Approach (What I Tried First)
+- Built custom TUI to aggregate logs
+- Tried to capture bacon's output
+- Parse and display in a dashboard
+- Lost bacon's interactivity
+
+### The Realization
+- Bacon IS a TUI orchestrator already
+- Fighting it = bad architecture
+- The real problem: orchestrating MULTIPLE bacon instances + turborepo
+
+### The New Approach (v0.2.1)
+- Use tmux for what it's good at: terminal multiplexing
+- Give each process its own pane with full TTY
+- Let bacon be bacon
+- Meta just handles intelligent setup and routing
+
+### Why This Is Better
+1. **No Output Capture** - Processes run natively
+2. **Full Bacon TUI** - All interactive features work
+3. **Tool-Aware Routing** - Turbo from root, bacon from project dirs
+4. **Professional UX** - Tmux is mature, battle-tested
+5. **Detach/Reattach** - Don't lose your dev session
+
+---
+
+## Alternative Angles for Different Audiences
+
+### For Rust Developers
+"I was being an idiot, trying to replace bacon's TUI. v0.2.1 fixes that: multiple bacon instances orchestrated by tmux. Each with full interactive TUI. This is what I should have built from the start."
+
+### For Full-Stack Teams
+"v0.2.1 pivot: instead of custom TUI, we use tmux. Each Rust project gets bacon with full TUI, Next.js apps get turborepo. One `meta dev` command, everything just works."
+
+### For Tool Builders
+"Lesson learned: don't fight the ecosystem. Bacon is a great TUI. Tmux is a great multiplexer. Meta's job? Intelligent orchestration, not reinventing wheels."
+
+### For Architecture Enthusiasts
+"The v0.2.1 rewrite taught me: sometimes the 'clever' solution (custom TUI) loses to the simple one (tmux + native processes). Embrace existing tools, coordinate them well."
+
+---
+
+## Common Questions & Prepared Answers
+
+**Q: Why change from custom TUI to tmux?**
+A: The custom TUI broke bacon's interactivity. Bacon IS a TUI - it needs terminal ownership. Tmux gives each process its own terminal. Better architecture, simpler code, native UX.
+
+**Q: Do I need to know tmux?**
+A: Nope! Meta shows you the shortcuts when it starts. `Ctrl+B` + arrows = navigate. That's 90% of what you need. Plus it's a transferable skill.
+
+**Q: What about the old TUI version?**
+A: Dead. Removed completely in v0.2.1. The tmux approach is objectively better - no output parsing, full bacon interactivity, cleaner code.
+
+**Q: Can I still use this without Rust/bacon?**
+A: Yes! Meta orchestrates any tools. The bacon integration is just one use case. Works great for Next.js, Python, Go, whatever.
+
+**Q: Is this production-ready?**
+A: For local development orchestration, yes. v0.2.1 is solid. We're still adding features (watch mode, metrics) but the core works great.
+
+---
+
+## Update Announcement Framing
+
+When announcing v0.2.1, be honest about the pivot:
+
+✅ **Be Transparent:**
+"I tried custom TUI first. It was wrong. Here's what I learned."
+
+✅ **Show the Journey:**
+"v0.1.0: Custom TUI (mistake)
+v0.2.0: Realized output capture breaks bacon
+v0.2.1: Complete rewrite with tmux (much better)"
+
+✅ **Explain Why:**
+"Fighting bacon = fighting the ecosystem. The right move: orchestrate multiple instances, don't replace them."
+
+✅ **Invite Testing:**
+"If you tried the old version, give v0.2.1 a shot. It's the approach I should have used from day one."
+
+This transparency builds trust and shows you're willing to pivot when wrong.

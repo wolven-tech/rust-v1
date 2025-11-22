@@ -4,16 +4,17 @@
 
 ### 1. Create Demo GIF
 - [ ] Go to the launch directory: `cd docs/launch`
-- [ ] Run `./record-demo.sh` to record the TUI demo
+- [ ] Run `./record-demo.sh` to record the tmux demo
 - [ ] Run `./convert-to-gif.sh` to create `meta-demo.gif`
 - [ ] Preview the GIF: `open meta-demo.gif`
 - [ ] Verify file size is under 10MB
-- [ ] Ensure GIF shows all key features (colors, navigation, filtering)
+- [ ] Ensure GIF shows all key features (tmux navigation, bacon TUIs, turborepo integration)
 
 ### 2. Repository Final Checks
 - [ ] Verify README.md is up to date at https://github.com/wolven-tech/rust-v1
 - [ ] Ensure all links work (especially the GitHub URL)
-- [ ] Check that `meta tui` works for fresh installations
+- [ ] Check that `meta dev` works for fresh installations
+- [ ] Check that `meta doctor` validates setup correctly
 - [ ] Test the quick start command: `bunx degit wolven-tech/rust-v1 test-project`
 - [ ] Verify install.sh script works: `cd tooling/meta && ./install.sh`
 
@@ -227,18 +228,20 @@ Always include the warning:
 bunx degit wolven-tech/rust-v1 my-project
 cd my-project && bun install
 cd tooling/meta && ./install.sh && cd ../..
-meta tui
+meta doctor
+meta dev
 ```
 
 **Elevator Pitch:**
-"Meta is a Rust-powered orchestrator for monorepos with a TUI dashboard. One command to run all your services with color-coded logs, smart filtering, and real-time updates. 5MB memory, zero config."
+"Meta is a Rust-powered orchestrator for monorepos with tmux integration. One command to launch multiple bacon instances and turborepo tasks, each with full interactive TUI. Zero config, workspace-aware tool routing."
 
 **Key Differentiators:**
-- Real-time TUI dashboard
-- Color-coded logs (red errors, white info)
-- Keyboard-driven navigation
-- 5MB memory footprint
-- Zero configuration needed
+- Multiple bacon instances with full interactive TUI
+- Turborepo integration with proper --filter support
+- Tmux orchestration for easy navigation
+- Native process execution (no output capture)
+- Zero configuration with auto-detection
+- Built-in validation with meta doctor
 
 ---
 
