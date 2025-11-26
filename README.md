@@ -94,9 +94,6 @@ meta tui
 ### The Meta Way (Recommended)
 
 ```bash
-# Interactive dashboard with log streaming
-meta tui
-
 # Start all servers
 meta dev
 
