@@ -27,7 +27,7 @@ const Provider = () => {
 
 const track = (options: { event: string; [key: string]: unknown }) => {
   if (!isProd) {
-    logger.info("Track", options);
+    logger.info(options, "Track");
     return;
   }
 

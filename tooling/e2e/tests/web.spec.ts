@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 
 test.describe("Web App E2E Tests", () => {
   test("Homepage loads successfully", async ({ page }) => {
@@ -35,7 +35,7 @@ test.describe("Web App E2E Tests", () => {
     // Browser HTML5 validation should prevent submission
     // Check for validation message or that form wasn't submitted
     const validationMessage = await emailInput.evaluate(
-      (el: HTMLInputElement) => el.validationMessage
+      (el: HTMLInputElement) => el.validationMessage,
     );
     expect(validationMessage).toBeTruthy();
   });

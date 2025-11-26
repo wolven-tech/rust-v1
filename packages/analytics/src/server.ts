@@ -35,7 +35,7 @@ export const setupAnalytics = async (options?: Props) => {
   return {
     track: (options: { event: string; [key: string]: unknown }) => {
       if (process.env.NODE_ENV !== "production") {
-        logger.info("Track", options);
+        logger.info(options, "Track");
         return;
       }
 

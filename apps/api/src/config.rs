@@ -26,11 +26,9 @@ impl Config {
             .and_then(|p| p.parse().ok())
             .unwrap_or_else(default_port);
 
-        let host = std::env::var("HOST")
-            .unwrap_or_else(|_| default_host());
+        let host = std::env::var("HOST").unwrap_or_else(|_| default_host());
 
-        let environment = std::env::var("ENVIRONMENT")
-            .unwrap_or_else(|_| default_environment());
+        let environment = std::env::var("ENVIRONMENT").unwrap_or_else(|_| default_environment());
 
         let loops_api_key = std::env::var("NEXT_PUBLIC_LOOPS_API_KEY").ok();
         let loops_form_id = std::env::var("NEXT_PUBLIC_LOOPS_FORM_ID").ok();

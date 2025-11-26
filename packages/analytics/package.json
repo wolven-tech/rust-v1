@@ -17,7 +17,10 @@
     "posthog-node": "^5.11.2"
   },
   "devDependencies": {
-    "@rust-v1/typescript": "workspace:*"
+    "@rust-v1/typescript": "workspace:*",
+    "@types/react": "^18",
+    "react": "^18.3.1",
+    "typescript": "^5.5.4"
   },
   "exports": {
     "./server": "./src/server.ts",

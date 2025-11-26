@@ -12,6 +12,5 @@
     "format": "cargo fmt",
     "typecheck": "cargo check",
     "watch": "bacon run-long"
-  },
-  "devDependencies": {}
+  }
 }

@@ -1,9 +1,10 @@
-import type { TriggerConfig } from "@trigger.dev/sdk/v3";
+import { defineConfig } from "@trigger.dev/sdk";
 
-export const config: TriggerConfig = {
+export default defineConfig({
   // Replace <your-project-ref> with your project id: https://trigger.dev/docs/trigger-config
   project: "<your-project-ref>",
   logLevel: "log",
+  maxDuration: 60,
   retries: {
     enabledInDev: true,
     default: {
@@ -14,4 +15,4 @@ export const config: TriggerConfig = {
       randomize: true,
     },
   },
-};
+});

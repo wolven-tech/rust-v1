@@ -1,9 +1,6 @@
 use std::sync::Arc;
 
-use crate::{
-    application::services::SubscriptionService,
-    config::Config,
-};
+use crate::{application::services::SubscriptionService, config::Config};
 
 #[derive(Clone)]
 pub struct AppState {

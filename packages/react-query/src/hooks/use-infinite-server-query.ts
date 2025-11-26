@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  type InfiniteData,
   type UseInfiniteQueryOptions,
   useInfiniteQuery,
 } from "@tanstack/react-query";
@@ -16,15 +17,17 @@ import type { ServerActionResponse } from "./use-server-query";
  */
 export function useInfiniteServerQuery<TData, TError = Error>(
   queryKey: string | number | (string | number)[],
-  serverAction: (pageParam: number) => Promise<ServerActionResponse<TData> | TData>,
+  serverAction: (
+    pageParam: number,
+  ) => Promise<ServerActionResponse<TData> | TData>,
   options?: Omit<
-    UseInfiniteQueryOptions<TData, TError, TData>,
+    UseInfiniteQueryOptions<TData, TError, InfiniteData<TData>, TData>,
     "queryKey" | "queryFn"
   >,
 ) {
   const queryKeyArray = Array.isArray(queryKey) ? queryKey : [queryKey];
 
-  return useInfiniteQuery<TData, TError>({
+  return useInfiniteQuery({
     queryKey: queryKeyArray,
     queryFn: async ({ pageParam = 0 }) => {
       const result = await serverAction(pageParam as number);
@@ -42,6 +45,9 @@ export function useInfiniteServerQuery<TData, TError = Error>(
 
       return result as TData;
     },
+    initialPageParam: 0,
+    getNextPageParam: (_lastPage, _allPages, lastPageParam) =>
+      (lastPageParam as number) + 1,
     ...options,
   });
 }

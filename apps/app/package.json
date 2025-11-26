@@ -13,7 +13,9 @@
   },
   "dependencies": {
     "@rust-v1/analytics": "workspace:*",
+    "@rust-v1/jobs": "workspace:*",
     "@rust-v1/kv": "workspace:*",
+    "@rust-v1/logger": "workspace:*",
     "@rust-v1/react-query": "workspace:*",
     "@rust-v1/supabase": "workspace:*",
     "@rust-v1/ui": "workspace:*",
@@ -32,9 +34,11 @@
     "@rust-v1/typescript": "workspace:*",
     "@sentry/nextjs": "^8",
     "@supabase/sentry-js-integration": "^0.2.0",
+    "@trigger.dev/sdk": "^4.0.0",
     "@types/node": "^22",
     "@types/react": "^18",
     "@types/react-dom": "^18",
+    "tailwindcss": "^3.4.10",
     "typescript": "^5.5.4"
   }
 }

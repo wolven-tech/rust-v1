@@ -33,7 +33,11 @@ impl SubscriptionService {
     }
 
     #[instrument(skip(self), fields(email = %email))]
-    pub async fn subscribe(&self, email: String, user_group: String) -> Result<(bool, Option<String>, Option<String>), ApiError> {
+    pub async fn subscribe(
+        &self,
+        email: String,
+        user_group: String,
+    ) -> Result<(bool, Option<String>, Option<String>), ApiError> {
         info!("Processing subscription request");
 
         // Validate email format (basic validation)
@@ -42,7 +46,10 @@ impl SubscriptionService {
             return Err(ApiError::bad_request("Invalid email format"));
         }
 
-        let form_id = self.config.loops_form_id.as_ref()
+        let form_id = self
+            .config
+            .loops_form_id
+            .as_ref()
             .ok_or_else(|| ApiError::config_error("Loops form ID not configured"))?;
 
         let url = format!("https://app.loops.so/api/newsletter-form/{}", form_id);
@@ -54,7 +61,8 @@ impl SubscriptionService {
             user_group,
         };
 
-        let response = self.http_client
+        let response = self
+            .http_client
             .post(&url)
             .header("Content-Type", "application/json")
             .json(&request_body)
@@ -70,10 +78,13 @@ impl SubscriptionService {
             ApiError::external_service_error(format!("Failed to read Loops API response: {}", e))
         })?;
 
-        info!("Loops API response status: {}, body: {}", status, response_text);
+        info!(
+            "Loops API response status: {}, body: {}",
+            status, response_text
+        );
 
-        let loops_response: LoopsApiResponse = serde_json::from_str(&response_text)
-            .map_err(|e| {
+        let loops_response: LoopsApiResponse =
+            serde_json::from_str(&response_text).map_err(|e| {
                 warn!("Failed to parse Loops API response: {}", e);
                 ApiError::external_service_error(format!("Invalid response from Loops API: {}", e))
             })?;
@@ -105,10 +116,15 @@ mod tests {
         };
 
         let service = SubscriptionService::new(config);
-        let result = service.subscribe("invalid-email".to_string(), "test".to_string()).await;
+        let result = service
+            .subscribe("invalid-email".to_string(), "test".to_string())
+            .await;
 
         assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("Invalid email format"));
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("Invalid email format"));
     }
 
     #[test]

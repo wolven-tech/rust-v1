@@ -10,9 +10,13 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@trigger.dev/sdk": "3.0.0-beta.56"
+    "@trigger.dev/sdk": "^4.0.0"
   },
   "devDependencies": {
-    "@rust-v1/typescript": "workspace:*"
+    "@rust-v1/typescript": "workspace:*",
+    "typescript": "^5.5.4"
+  },
+  "exports": {
+    "./trigger/example": "./trigger/example.ts"
   }
 }

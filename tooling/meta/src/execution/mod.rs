@@ -53,7 +53,10 @@ pub async fn dev(config: &Config, projects: Option<Vec<String>>) -> Result<()> {
         .is_ok();
 
     if tmux_available && commands.len() > 1 {
-        println!("✨ Launching tmux session with {} panes...\n", commands.len());
+        println!(
+            "✨ Launching tmux session with {} panes...\n",
+            commands.len()
+        );
         launch_tmux_session(&commands).await?;
     } else if !tmux_available {
         println!("⚠️  tmux not found. Install tmux to automatically launch all commands.");
@@ -64,7 +67,7 @@ pub async fn dev(config: &Config, projects: Option<Vec<String>>) -> Result<()> {
         let parts: Vec<&str> = commands[0].1.split("&&").collect();
         if parts.len() == 2 {
             let dir = parts[0].trim().strip_prefix("cd ").unwrap_or(".");
-            let cmd_parts: Vec<&str> = parts[1].trim().split_whitespace().collect();
+            let cmd_parts: Vec<&str> = parts[1].split_whitespace().collect();
             if !cmd_parts.is_empty() {
                 let mut cmd = tokio::process::Command::new(cmd_parts[0]);
                 cmd.args(&cmd_parts[1..]);
@@ -90,20 +93,24 @@ async fn launch_tmux_session(commands: &[(String, String)]) -> Result<()> {
 
     // Kill existing session if it exists
     let _ = Command::new("tmux")
-        .args(&["kill-session", "-t", session_name])
+        .args(["kill-session", "-t", session_name])
         .output()
         .await;
 
     // Wrap commands in a shell that keeps the pane alive after the command exits
     let wrap_command = |cmd: &str| -> String {
-        format!("{}; echo '\\n✓ Process exited. Press Ctrl+C to close or Enter to restart.'; read -r; {}", cmd, cmd)
+        format!(
+            "{}; echo '\\n✓ Process exited. Press Ctrl+C to close or Enter to restart.'; read -r; \
+             {}",
+            cmd, cmd
+        )
     };
 
     // Create new session with first command
     let first_cmd = &commands[0];
     let wrapped_first = wrap_command(&first_cmd.1);
     Command::new("tmux")
-        .args(&["new-session", "-d", "-s", session_name, "-n", &first_cmd.0])
+        .args(["new-session", "-d", "-s", session_name, "-n", &first_cmd.0])
         .arg(&wrapped_first)
         .output()
         .await?;
@@ -112,20 +119,20 @@ async fn launch_tmux_session(commands: &[(String, String)]) -> Result<()> {
     for (name, cmd) in commands.iter().skip(1) {
         let wrapped_cmd = wrap_command(cmd);
         Command::new("tmux")
-            .args(&["split-window", "-t", session_name, "-h"])
+            .args(["split-window", "-t", session_name, "-h"])
             .arg(&wrapped_cmd)
             .output()
             .await?;
 
         Command::new("tmux")
-            .args(&["select-pane", "-t", session_name, "-T", name])
+            .args(["select-pane", "-t", session_name, "-T", name])
             .output()
             .await?;
     }
 
     // Tile the panes evenly
     Command::new("tmux")
-        .args(&["select-layout", "-t", session_name, "tiled"])
+        .args(["select-layout", "-t", session_name, "tiled"])
         .output()
         .await?;
 
@@ -144,7 +151,7 @@ async fn launch_tmux_session(commands: &[(String, String)]) -> Result<()> {
     println!("╰─────────────────────────────────────────────────────────╯\n");
 
     let status = Command::new("tmux")
-        .args(&["attach-session", "-t", session_name])
+        .args(["attach-session", "-t", session_name])
         .stdin(std::process::Stdio::inherit())
         .stdout(std::process::Stdio::inherit())
         .stderr(std::process::Stdio::inherit())
@@ -298,15 +305,14 @@ pub async fn doctor(config: &Config) -> Result<()> {
         {
             Ok(output) if output.status.success() => {
                 let version_str = String::from_utf8_lossy(&output.stdout);
-                let version = version_str
-                    .lines()
-                    .next()
-                    .unwrap_or("unknown")
-                    .trim();
+                let version = version_str.lines().next().unwrap_or("unknown").trim();
                 println!("  ✓ {} → {} ({})", tool_name, tool_config.command, version);
             }
             Ok(_) => {
-                println!("  ⚠ {} → {} (found but version check failed)", tool_name, tool_config.command);
+                println!(
+                    "  ⚠ {} → {} (found but version check failed)",
+                    tool_name, tool_config.command
+                );
                 warnings += 1;
             }
             Err(_) => {
@@ -342,7 +348,7 @@ pub async fn doctor(config: &Config) -> Result<()> {
             println!("  ✓ {} → {} ({})", name, project.path, project.project_type);
 
             // Check if project has dev task
-            if project.tasks.get("dev").is_some() {
+            if project.tasks.contains_key("dev") {
                 println!("    • dev task configured");
             }
         } else {
@@ -387,7 +393,10 @@ pub async fn doctor(config: &Config) -> Result<()> {
             println!("  ✗ {} error(s) found - these must be fixed", errors);
         }
         if warnings > 0 {
-            println!("  ⚠ {} warning(s) - meta will work but with reduced functionality", warnings);
+            println!(
+                "  ⚠ {} warning(s) - meta will work but with reduced functionality",
+                warnings
+            );
         }
     }
 
