@@ -11,28 +11,19 @@ A production-ready monorepo template featuring:
 - 🖥️ **Real-time Log Streaming** (Color-coded, filterable)
 - ⚡ **Parallel Execution** (Async process management)
 
-## ✨ What Makes Meta Awesome?
+## ✨ Meta Orchestrator
 
-**Meta** is your unified development command center. One tool to rule them all:
+**Meta** is a unified task orchestrator for modern monorepos. One command to rule them all:
 
 ```bash
-# Start all development servers
-meta dev
-
-# Build everything for production
-meta build --prod
-
-# Run all tests
-meta test
+meta dev              # Start all dev servers in tmux
+meta build --prod     # Build everything for production
+meta test             # Run all tests
 ```
 
-### Key Features
+**Key Features:** Smart tool routing (Turborepo + Bacon), tmux orchestration with full TUI per process, zero config, ~5 MB memory footprint.
 
-- 🎨 **Color-coded logs** - Instantly spot errors (red) vs info (white)
-- 🔍 **Filter by project** - Focus on what matters (press `Enter`)
-- 🚀 **Zero config** - Works out of the box with sensible defaults
-- ⚡ **Fast** - Async Rust = minimal overhead (~5 MB memory)
-- 📊 **Visual feedback** - Project status, timestamps, live updates
+📦 **Install:** `cargo install monorepo-meta` or see [tooling/meta/README.md](tooling/meta/README.md) for details.
 
 ---
 
@@ -129,7 +120,7 @@ rust-v1/
 │   └── ...
 │
 ├── tooling/
-│   ├── meta/             # 🎯 Meta orchestrator (v0.2.0)
+│   ├── meta/             # 🎯 Meta orchestrator ([crates.io](https://crates.io/crates/monorepo-meta))
 │   ├── typescript/       # Shared TS config
 │   └── e2e/              # Playwright tests
 │
@@ -170,12 +161,11 @@ rust-v1/
 
 ## 🛠️ Tech Stack
 
-### Meta Orchestrator
+### Meta Orchestrator ([crates.io](https://crates.io/crates/monorepo-meta))
 - **Rust** - Performance & safety
 - **Clap** - CLI argument parsing
-- **Ratatui** - Terminal UI framework
 - **Tokio** - Async runtime
-- **Crossterm** - Terminal control
+- **Tmux** - Process orchestration
 
 ### Frontend
 - **Next.js 15** - React framework

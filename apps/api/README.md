@@ -79,9 +79,9 @@ This will:
 cargo run
 ```
 
-**Option 3: Via meta orchestrator (future)**
+**Option 3: Via meta orchestrator (recommended)**
 ```bash
-meta dev
+meta dev -p api
 ```
 
 ### Testing

@@ -1,12 +1,15 @@
 # Meta - Monorepo Task Orchestrator
 
+[![Crates.io](https://img.shields.io/crates/v/monorepo-meta.svg)](https://crates.io/crates/monorepo-meta)
+[![Documentation](https://docs.rs/monorepo-meta/badge.svg)](https://docs.rs/monorepo-meta)
+
 > One command to rule them all 🚀
 
 **Meta** is a unified task orchestrator for modern monorepos. Stop juggling Turborepo, cargo, and bacon commands - let meta orchestrate multiple bacon instances and turborepo tasks in tmux automatically.
 
-[![asciicast](https://asciinema.org/a/N9NaULQ470ih2SV6aymeENmLq.svg)](https://asciinema.org/a/N9NaULQ470ih2SV6aymeENmLq)
+📦 **Install from crates.io:** `cargo install monorepo-meta`
 
-**📦 Portable:** This directory is self-contained and can be copied to any monorepo. Just run `./install.sh` to get started!
+[![asciicast](https://asciinema.org/a/N9NaULQ470ih2SV6aymeENmLq.svg)](https://asciinema.org/a/N9NaULQ470ih2SV6aymeENmLq)
 
 ## Why Meta?
 
@@ -31,30 +34,19 @@ Modern monorepos use **multiple specialized tools**:
 - ✅ **Built-in Validation** - `meta doctor` checks your entire setup
 - ✅ **Detach/Reattach** - Keep dev servers running in background
 - ✅ **Hot Reload Built-in** - Bacon and Turbo handle file watching natively
-- 🚧 **Session Management** - Save/restore pane layouts (coming soon)
-- 🚧 **Multi-Environment** - Support for dev, staging, prod configs (coming soon)
+- ✅ **Custom Pane Titles** - Each tmux pane shows project name
 
 ## Installation
 
-### Quick Install (In Monorepo)
-
 ```bash
-# Install from source
-cd tooling/meta
-cargo install --path .
+# Install from crates.io (recommended)
+cargo install monorepo-meta
 
-# Or use directly
-cargo run -- dev
+# Or install from source
+cd tooling/meta && cargo install --path .
 ```
 
-### Standalone Installation
-
-**Want to use meta in your own monorepo?** See the **[Standalone Installation Guide](./STANDALONE.md)** for complete instructions:
-
-- Installing meta from this repository
-- Copying meta to your project
-- Configuring meta.toml for your monorepo
-- Integration with your existing tools
+For detailed setup in your own monorepo, see the **[Standalone Installation Guide](./STANDALONE.md)**.
 
 ## Quick Start
 
@@ -65,7 +57,7 @@ cargo run -- dev
 Check that meta and your configuration are correct:
 
 ```bash
-bun run meta:doctor
+meta doctor
 ```
 
 This will validate:
@@ -78,7 +70,7 @@ This will validate:
 
 **Run all dev servers with tmux:**
 ```bash
-bun run meta:dev
+meta dev
 ```
 
 This launches a tmux session with separate panes for each project:
@@ -89,20 +81,20 @@ This launches a tmux session with separate panes for each project:
 
 **Run specific projects only:**
 ```bash
-bun run meta:dev -- --projects api
-bun run meta:dev -- --projects web app
+meta dev -p api
+meta dev -p web app
 ```
 
 ### 3. Run Tasks
 
 ```bash
 # Run any task across all projects
-bun run meta -- run fmt
-bun run meta -- run clippy
-bun run meta -- run test
+meta run fmt
+meta run clippy
+meta run test
 
 # Run on specific projects
-bun run meta -- run test --projects api
+meta run test -p api
 ```
 
 ## How It Works
@@ -130,35 +122,11 @@ Meta automatically routes commands based on project type:
 ### Updating Meta
 
 ```bash
-# In the monorepo
-cd tooling/meta
-git pull origin main
-cargo install --path .
+# From crates.io
+cargo install monorepo-meta
+
+# Check version
 meta --version
-```
-
-For standalone installations, see the [Update Guide](../../docs/meta/STANDALONE.md#updating-meta).
-
-## Quick Start
-
-```bash
-# Initialize configuration
-meta init
-
-# Start all development servers
-meta dev
-
-# Start specific projects
-meta dev -p api -p web
-
-# Build all projects
-meta build
-
-# Build for production
-meta build --prod
-
-# Run tests
-meta test
 ```
 
 ## Configuration
@@ -325,14 +293,6 @@ meta/
 └── README.md
 ```
 
-## How It Works
-
-1. **Read Configuration** - Load `meta.toml`
-2. **Smart Routing** - Match tasks to appropriate tools
-3. **Tmux Orchestration** - Create session with separate panes for each process
-4. **Tool-Aware Execution** - Turbo from workspace root, bacon from project directories
-5. **Native Process Execution** - Each process runs with full TTY access
-
 ## Comparison
 
 | Tool | Purpose | Meta Advantage |
@@ -350,7 +310,7 @@ meta/
 - [x] Task routing
 - [x] Parallel execution
 
-### v0.2.1 (Current) ✅
+### v0.2.1 ✅
 - [x] Tmux orchestration
 - [x] Multiple bacon instances with full TUI
 - [x] Turborepo workspace integration
@@ -358,9 +318,13 @@ meta/
 - [x] Detach/reattach support
 - [x] Tool-aware routing
 
-### v0.3.0 (Next)
+### v0.3.0 (Current) ✅
+- [x] Custom pane titles (each tmux pane shows project name)
+- [x] Clean documentation (no bun wrappers, direct meta commands)
+- [x] Published to crates.io (`cargo install monorepo-meta`)
+
+### v0.4.0 (Next)
 - [ ] Session management (save/restore pane layouts)
-- [ ] Custom pane titles from meta.toml
 - [ ] Multiple environment support (dev, staging, prod)
 - [ ] Project dependency awareness (start in order)
 
