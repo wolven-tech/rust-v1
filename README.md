@@ -7,7 +7,7 @@
 A production-ready monorepo template featuring:
 - 🦀 **Rust API** (Axum with Clean Architecture)
 - ⚛️ **Next.js Apps** (Marketing + Application)
-- 🎯 **Meta Orchestrator** (Unified CLI with TUI dashboard)
+- 🎯 **Meta Orchestrator** (Unified CLI with Tmux)
 - 🖥️ **Real-time Log Streaming** (Color-coded, filterable)
 - ⚡ **Parallel Execution** (Async process management)
 
@@ -16,9 +16,6 @@ A production-ready monorepo template featuring:
 **Meta** is your unified development command center. One tool to rule them all:
 
 ```bash
-# Interactive TUI with live log streaming
-meta tui
-
 # Start all development servers
 meta dev
 
@@ -52,12 +49,6 @@ cd my-project
 
 # Install dependencies
 bun install
-
-# Install meta orchestrator
-cd tooling/meta && ./install.sh && cd ../..
-
-# Start development with TUI
-meta tui
 ```
 
 That's it! 🎉
@@ -77,12 +68,6 @@ cd rust-v1
 
 # Install dependencies
 bun install
-
-# Install meta orchestrator
-cd tooling/meta && ./install.sh && cd ../..
-
-# Start development
-meta tui
 ```
 
 **Want to use meta in your own project?** Check out the **[Standalone Installation Guide](docs/meta/STANDALONE.md)** to install meta independently.
@@ -106,16 +91,6 @@ meta build --prod
 # Run tests
 meta test
 ```
-
-### TUI Keyboard Shortcuts
-
-| Key | Action |
-|-----|--------|
-| `↑/k`, `↓/j` | Navigate projects |
-| `Enter` | Toggle log filter for selected project |
-| `a` | Show all logs (remove filter) |
-| `c` | Clear log buffer |
-| `q` | Quit |
 
 ### Traditional npm Scripts (Still Available)
 
@@ -228,10 +203,7 @@ rust-v1/
 ### Development Workflow
 
 ```bash
-# Start everything with TUI
-meta tui
-
-# Or start without TUI
+# start
 meta dev
 
 # Watch specific projects
@@ -377,14 +349,6 @@ bun typecheck    # Type checking
 
 ## 🎉 What's New
 
-### v0.2.0 (2025-01-19)
-
-- ✨ **Real-time log streaming** in TUI
-- 🎨 **Color-coded output** (info=white, error=red)
-- 🔍 **Log filtering** by project
-- ⚡ **High performance** (~3000 lines/sec)
-- 📝 **Comprehensive documentation**
-
 See [CHANGELOG](CHANGELOG.md) for complete history.
 
 ---
@@ -420,5 +384,3 @@ MIT License - See [LICENSE.md](LICENSE.md)
 ---
 
 **Happy coding! 🚀**
-
-Use `meta tui` for the best development experience.
