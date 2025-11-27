@@ -3,11 +3,12 @@
 //! This library provides the core functionality for the V1 API service,
 //! implementing Clean Architecture patterns.
 
+use std::time::Duration;
+
 use axum::{
     routing::{get, post},
     Router,
 };
-use std::time::Duration;
 use tower_http::{cors::CorsLayer, timeout::TimeoutLayer, trace::TraceLayer};
 use utoipa::OpenApi;
 use utoipa_scalar::{Scalar, Servable};

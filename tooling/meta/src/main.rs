@@ -31,6 +31,10 @@ async fn main() -> Result<()> {
             let config = Config::load()?;
             execution::dev(&config, projects).await
         }
+        Commands::DevStop => {
+            info!("Stopping development servers...");
+            execution::dev_stop().await
+        }
         Commands::Build { prod, projects } => {
             info!("Building projects...");
             let config = Config::load()?;

@@ -8,8 +8,10 @@
     "start": "cargo run --release",
     "test": "cargo test",
     "clean": "cargo clean",
-    "lint": "cargo clippy",
+    "lint": "cargo fmt --check && cargo clippy -- -D warnings",
+    "lint:sort": "cargo sort --check",
     "format": "cargo fmt",
+    "format:sort": "cargo sort -w",
     "typecheck": "cargo check",
     "watch": "bacon run-long"
   }

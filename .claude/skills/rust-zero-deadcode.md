@@ -246,35 +246,54 @@ pub enum Commands {
 
 ### Error Handling (MANDATORY)
 
-#### Layer-Specific Error Types
+#### Layer-Specific Error Types with Factory Methods
 
 ```rust
-// ✅ CORRECT - Only error variants that are actually used
+// ✅ CORRECT - Error enum with factory methods for ergonomic construction
 #[derive(Debug, thiserror::Error)]
-pub enum ConfigError {
-    #[error("Configuration file not found: {0}")]
+pub enum ApiError {
+    #[error("Bad request: {0}")]
+    BadRequest(String),
+
+    #[error("Not found: {0}")]
     NotFound(String),
 
-    #[error("Invalid TOML: {0}")]
-    InvalidToml(#[from] toml::de::Error),
+    #[error("External service error: {0}")]
+    ExternalServiceError(String),
 }
 
-// ❌ WRONG - Error variants that are never constructed
-#[derive(Debug, thiserror::Error)]
-pub enum ConfigError {
-    #[error("Configuration file not found: {0}")]
-    NotFound(String),  // Used
+impl ApiError {
+    // Factory methods accept `impl Into<String>` for flexibility
+    pub fn bad_request(msg: impl Into<String>) -> Self {
+        Self::BadRequest(msg.into())
+    }
 
-    #[error("Invalid TOML: {0}")]
-    InvalidToml(#[from] toml::de::Error),  // Used
+    pub fn not_found(msg: impl Into<String>) -> Self {
+        Self::NotFound(msg.into())
+    }
 
-    #[allow(dead_code)]
-    #[error("Permission denied: {0}")]
-    PermissionDenied(String),  // NEVER USED - DELETE!
+    pub fn external_service_error(msg: impl Into<String>) -> Self {
+        Self::ExternalServiceError(msg.into())
+    }
+}
 
-    #[allow(dead_code)]
-    #[error("Network error: {0}")]
-    Network(String),  // NEVER USED - DELETE!
+// ✅ Implement IntoResponse for Axum handlers
+impl IntoResponse for ApiError {
+    fn into_response(self) -> Response {
+        let status_code = self.status_code();
+        let body = Json(ErrorResponse {
+            error: self.error_type(),
+            message: self.to_string(),
+        });
+        (status_code, body).into_response()
+    }
+}
+
+// ✅ Implement From for automatic error conversion
+impl From<anyhow::Error> for ApiError {
+    fn from(err: anyhow::Error) -> Self {
+        Self::InternalServerError(err.to_string())
+    }
 }
 ```
 
@@ -286,6 +305,13 @@ let value = option.unwrap();
 
 // ✅ CORRECT - Proper error handling
 let value = option.ok_or(Error::ValueNotFound)?;
+
+// ✅ CORRECT - With factory method
+let form_id = self
+    .config
+    .loops_form_id
+    .as_ref()
+    .ok_or_else(|| ApiError::config_error("Form ID not configured"))?;
 ```
 
 ### Async/Await Patterns
@@ -303,6 +329,86 @@ pub trait Repository: Send + Sync {
 pub trait UnusedRepository: Send + Sync {  // DELETE THIS!
     async fn method(&self) -> Result<()>;
 }
+```
+
+### Tracing and Instrumentation
+
+```rust
+// ✅ CORRECT - Use #[instrument] for automatic span creation
+#[instrument(skip(self), fields(email = %email))]
+pub async fn subscribe(
+    &self,
+    email: String,
+    user_group: String,
+) -> Result<(), ApiError> {
+    info!("Processing subscription request");
+    // ...
+}
+
+// ✅ CORRECT - Use structured logging
+info!("Loops API response status: {}, body: {}", status, response_text);
+warn!("Failed to parse response: {}", e);
+
+// ❌ WRONG - println! in library code
+println!("Processing request...");  // Use tracing instead!
+```
+
+### Idiomatic Rust Patterns
+
+```rust
+// ✅ CORRECT - Use contains_key for existence checks
+if project.tasks.contains_key("dev") {
+    println!("dev task configured");
+}
+
+// ❌ WRONG - Unnecessarily verbose
+if project.tasks.get("dev").is_some() {
+    println!("dev task configured");
+}
+
+// ✅ CORRECT - Pass arrays directly (not references)
+Command::new("tmux")
+    .args(["kill-session", "-t", session_name])
+    .output()
+    .await?;
+
+// ❌ WRONG - Unnecessary reference to array
+Command::new("tmux")
+    .args(&["kill-session", "-t", session_name])
+    .output()
+    .await?;
+
+// ✅ CORRECT - Method chaining with proper line breaks
+let response = self
+    .http_client
+    .post(&url)
+    .header("Content-Type", "application/json")
+    .json(&request_body)
+    .send()
+    .await?;
+
+// ❌ WRONG - Long method chains on single line
+let response = self.http_client.post(&url).header("Content-Type", "application/json").json(&request_body).send().await?;
+```
+
+### Library Re-exports
+
+```rust
+// ✅ CORRECT - Re-export commonly used types in lib.rs
+// lib.rs
+pub mod application;
+pub mod config;
+pub mod domain;
+pub mod error;
+pub mod infrastructure;
+pub mod presentation;
+
+// Re-export commonly used types for convenience
+pub use config::Config;
+pub use infrastructure::AppState;
+
+// Consumers can then use:
+use api::{create_router, AppState, Config};
 ```
 
 ### Type Safety with Newtypes
@@ -564,6 +670,157 @@ unused_variables = "deny"
 cargo fmt --check
 cargo clippy -- -D warnings -D dead_code
 cargo test
+```
+
+---
+
+## 📦 Import Best Practices (ENFORCED)
+
+Style matters for imports - let tools be the source of truth and follow these conventions.
+
+### 1. Use `use` over long inline paths
+
+```rust
+// ❌ WRONG - Inline paths everywhere
+let t = chrono::DateTime::from_timestamp(123);
+let map = std::collections::HashMap::new();
+
+// ✅ CORRECT - Import at module top
+use chrono::DateTime;
+use std::collections::HashMap;
+
+let t = DateTime::from_timestamp(123);
+let map = HashMap::new();
+```
+
+**Rule:** If you use a type or function more than once (or in a key role), import it.
+
+### 2. Keep imports at module top, not inline
+
+```rust
+// ❌ WRONG - Inline imports in functions
+fn foo() {
+    use std::collections::HashMap;
+    let mut map: HashMap<String, i32> = HashMap::new();
+}
+
+// ✅ CORRECT - Module-level imports
+use std::collections::HashMap;
+
+fn foo() {
+    let mut map: HashMap<String, i32> = HashMap::new();
+}
+```
+
+**When is inline `use` acceptable?**
+- Very narrow scope in tests or small helper blocks
+- When the import is only meaningful in that small block
+
+### 3. Group imports predictably
+
+```rust
+// ✅ CORRECT - Grouped and ordered imports
+// 1. std
+use std::collections::HashMap;
+use std::fmt;
+
+// 2. external crates
+use chrono::DateTime;
+use serde::{Deserialize, Serialize};
+
+// 3. crate / module-local
+use crate::domain::User;
+use crate::utils::parse;
+use super::SomeParentThing;
+```
+
+**Rules:**
+- No random blank lines in the middle of a group
+- Blank line between groups (std / external / crate)
+- Alphabetical order inside each group
+
+### 4. Avoid glob imports (`*`) almost everywhere
+
+```rust
+// ❌ WRONG - Glob imports in production code
+use chrono::*;
+use crate::utils::*;
+
+// ✅ CORRECT - Be explicit
+use chrono::{DateTime, Utc};
+```
+
+**Why avoid?**
+- Hides where names come from
+- Can introduce name clashes when libraries grow
+- Makes IDE navigation weaker
+
+**Acceptable exceptions:**
+- `use crate::prelude::*;` (deliberate prelude design)
+- Test modules where ergonomics > strictness
+
+### 5. Be explicit about what you import
+
+```rust
+// ❌ WRONG - Too broad
+use chrono::{DateTime, Utc, Local, NaiveDate, NaiveTime, NaiveDateTime};
+
+// ✅ CORRECT - Only what you use
+use chrono::{DateTime, Utc};
+```
+
+**Why?**
+- Keeps the mental model small
+- Makes dead code & unused import detection clean
+- Makes refactors less surprising
+
+### 6. Prefer `crate::` over `super::` paths
+
+```rust
+// ✅ CORRECT - Absolute paths within the crate
+use crate::domain::User;
+use crate::services::user_service::UserService;
+
+// ⚠️  Use `super::` sparingly, when it genuinely models "parent module"
+use super::shared_test_data;
+
+// ❌ WRONG - Deeply nested super paths (brittle)
+use super::super::super::SomeType;
+```
+
+**Why `crate::`?**
+- Resilient if you move the current module
+- Keeps the import section easy to scan
+
+### 7. Re-exports for library crates
+
+```rust
+// ✅ CORRECT - Collect public-facing imports at a central place
+// lib.rs or mod api
+pub use crate::domain::User;
+pub use crate::services::UserService;
+
+// Consumers then just:
+use your_crate::{User, UserService};
+```
+
+**Rules:**
+- Use `pub use` for API surface, not to bridge poor internal organization
+- Keep internal modules clean; use re-exports to create a nice facade
+
+### Tool Configuration
+
+```toml
+# rustfmt.toml
+group_imports = "StdExternalCrate"
+imports_granularity = "Item"
+normalize_imports = true
+reorder_imports = true
+```
+
+Run on save and in CI:
+```bash
+cargo fmt --check
 ```
 
 ---

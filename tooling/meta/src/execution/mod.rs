@@ -1,8 +1,54 @@
 use std::collections::HashMap;
 
 use anyhow::Result;
+use tokio::process::Command;
 
 use crate::{adapters::ToolAdapter, config::Config};
+
+/// Stop all running meta-dev tmux sessions
+pub async fn dev_stop() -> Result<()> {
+    let session_name = "meta-dev";
+
+    println!("🛑 Stopping meta development session...\n");
+
+    // Check if session exists
+    let list_output = Command::new("tmux")
+        .args(["has-session", "-t", session_name])
+        .output()
+        .await;
+
+    match list_output {
+        Ok(output) if output.status.success() => {
+            // Session exists, kill it
+            let kill_result = Command::new("tmux")
+                .args(["kill-session", "-t", session_name])
+                .output()
+                .await?;
+
+            if kill_result.status.success() {
+                println!("✅ Stopped tmux session '{}'", session_name);
+                println!("\n💡 All development processes have been terminated.");
+            } else {
+                let stderr = String::from_utf8_lossy(&kill_result.stderr);
+                anyhow::bail!("Failed to kill session: {}", stderr);
+            }
+        }
+        Ok(_) => {
+            println!("ℹ️  No active meta-dev session found.");
+            println!("\n💡 Use 'meta dev' to start development servers.");
+        }
+        Err(e) => {
+            if e.kind() == std::io::ErrorKind::NotFound {
+                println!("⚠️  tmux is not installed.");
+                println!("   Install tmux to use the multi-process dev mode.");
+            } else {
+                anyhow::bail!("Failed to check tmux session: {}", e);
+            }
+        }
+    }
+
+    Ok(())
+}
 
 pub async fn dev(config: &Config, projects: Option<Vec<String>>) -> Result<()> {
     let projects_to_run = get_projects_to_run(config, projects)?;
@@ -87,8 +133,6 @@ pub async fn dev(config: &Config, projects: Option<Vec<String>>) -> Result<()> {
 }
 
 async fn launch_tmux_session(commands: &[(String, String)]) -> Result<()> {
-    use tokio::process::Command;
-
     let session_name = "meta-dev";
 
     // Kill existing session if it exists

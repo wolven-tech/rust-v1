@@ -21,6 +21,10 @@ pub enum Commands {
         projects: Option<Vec<String>>,
     },
 
+    /// Stop all running tmux development sessions
+    #[command(name = "dev:stop")]
+    DevStop,
+
     /// Build projects
     Build {
         /// Production build

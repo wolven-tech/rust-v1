@@ -49,6 +49,10 @@
     "lint": {
       "dependsOn": ["^topo"]
     },
+    "format": {
+      "dependsOn": ["^topo"],
+      "cache": false
+    },
     "typecheck": {
       "dependsOn": ["^topo"],
       "outputs": ["node_modules/.cache/tsbuildinfo.json"]

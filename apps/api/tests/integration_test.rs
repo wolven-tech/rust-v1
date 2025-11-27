@@ -1,6 +1,8 @@
 use api::{create_router, AppState, Config};
-use axum::body::Body;
-use axum::http::{Request, StatusCode};
+use axum::{
+    body::Body,
+    http::{Request, StatusCode},
+};
 use tower::ServiceExt;
 
 #[tokio::test]

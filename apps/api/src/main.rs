@@ -1,9 +1,9 @@
-use anyhow::Result;
-use socket2::{Domain, Socket, Type};
 use std::net::SocketAddr;
-use tracing::info;
 
+use anyhow::Result;
 use api::{create_router, AppState, Config};
+use socket2::{Domain, Socket, Type};
+use tracing::info;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -52,8 +52,8 @@ async fn main() -> Result<()> {
     let socket = Socket::new(Domain::IPV4, Type::STREAM, None)?;
     socket.set_reuse_address(true)?;
 
-    // Only enable SO_REUSEPORT in production to avoid duplicate processes during development
-    // Note: set_reuse_port is only available on some platforms
+    // Only enable SO_REUSEPORT in production to avoid duplicate processes during
+    // development Note: set_reuse_port is only available on some platforms
     #[cfg(all(unix, not(target_os = "macos")))]
     if config.environment != "development" {
         socket.set_reuse_port(true)?;

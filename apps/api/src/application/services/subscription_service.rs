@@ -2,8 +2,7 @@ use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use tracing::{info, instrument, warn};
 
-use crate::config::Config;
-use crate::error::ApiError;
+use crate::{config::Config, error::ApiError};
 
 #[derive(Debug, Serialize)]
 struct LoopsApiRequest {

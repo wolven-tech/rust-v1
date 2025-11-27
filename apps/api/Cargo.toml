@@ -62,6 +62,7 @@ wiremock = "0.6"
 futures = "0.3"
 tokio-test = "0.4"
 tower = { version = "0.4", features = ["util"] }
+cargo-sort = "2.0.2"
 
 [features]
 default = []
