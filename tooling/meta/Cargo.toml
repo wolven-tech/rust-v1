@@ -1,9 +1,9 @@
 [package]
 name = "monorepo-meta"
-version = "0.3.0"
+version = "0.3.2"
 edition = "2021"
 authors = ["Meta Team"]
-description = "Meta task orchestrator for monorepos - unified TUI for Turborepo, moon, bacon"
+description = "Unified CLI for polyglot monorepos - orchestrates Turborepo, Cargo, and Bacon in tmux"
 license = "MIT"
 repository = "https://github.com/wolven-tech/rust-v1"
 homepage = "https://github.com/wolven-tech/rust-v1"

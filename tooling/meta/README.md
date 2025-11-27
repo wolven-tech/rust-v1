@@ -33,6 +33,7 @@ Modern monorepos use **multiple specialized tools**:
 - ✅ **Zero Config** - Works with sensible defaults, configurable via `meta.toml`
 - ✅ **Built-in Validation** - `meta doctor` checks your entire setup
 - ✅ **Detach/Reattach** - Keep dev servers running in background
+- ✅ **Stop All Sessions** - `meta dev:stop` kills all dev processes instantly
 - ✅ **Hot Reload Built-in** - Bacon and Turbo handle file watching natively
 - ✅ **Custom Pane Titles** - Each tmux pane shows project name
 
@@ -179,6 +180,17 @@ meta dev
 meta dev -p api -p web
 ```
 
+### `meta dev:stop`
+Stop all running tmux development sessions.
+
+**Example:**
+```bash
+# Stop all dev servers
+meta dev:stop
+```
+
+This will kill the `meta-dev` tmux session and all processes running within it.
+
 ### `meta build`
 Build all projects.
 
@@ -318,10 +330,15 @@ meta/
 - [x] Detach/reattach support
 - [x] Tool-aware routing
 
-### v0.3.0 (Current) ✅
+### v0.3.0 ✅
 - [x] Custom pane titles (each tmux pane shows project name)
 - [x] Clean documentation (no bun wrappers, direct meta commands)
 - [x] Published to crates.io (`cargo install monorepo-meta`)
+
+### v0.3.1 (Current) ✅
+- [x] `meta dev:stop` command to stop all tmux development sessions
+- [x] Shared Rust config files at workspace root (rustfmt.toml, .clippy.toml, cargo-sort.toml)
+- [x] Improved tmux navigation guide with keyboard shortcuts
 
 ### v0.4.0 (Next)
 - [ ] Session management (save/restore pane layouts)
