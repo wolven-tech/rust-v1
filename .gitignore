@@ -73,8 +73,9 @@ Cargo.lock.bak
 # Next.js specific
 .env.production
 
-# Meta logs
+# Meta logs and runtime data
 meta-logs-*.txt
+.meta/
 
 # IDE
 .vscode/*

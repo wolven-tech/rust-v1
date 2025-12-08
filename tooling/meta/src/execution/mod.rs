@@ -5,6 +5,316 @@ use tokio::process::Command;
 
 use crate::{adapters::ToolAdapter, config::Config};
 
+/// Show status of running dev processes
+///
+/// # Output Format (designed for Claude Code parsing)
+///
+/// ```text
+/// === META DEV STATUS ===
+/// Log file: .meta/logs/dev.log
+///
+/// ## Running Processes
+/// PROJECT    PID      STARTED                    UPTIME
+/// api        12345    2025-12-08T12:02:18        1h 23m
+/// web        12346    2025-12-08T12:02:19        1h 23m
+///
+/// ## Recent Events (last 20)
+/// [2025-12-08T12:02:18] [api] START: Process started (pid=12345)
+/// [2025-12-08T12:05:32] [api] RESTART: bacon rebuild detected
+/// ...
+///
+/// ## Binary Modification Times
+/// apps/api/target/debug/api: 2025-12-08T12:05:30 (rebuilt 1h 20m ago)
+/// ```
+pub async fn status(config: &Config, project: Option<String>, lines: usize) -> Result<()> {
+    println!("=== META DEV STATUS ===");
+    println!("Log file: .meta/logs/dev.log\n");
+
+    // Check if tmux session exists
+    let session_check = Command::new("tmux")
+        .args(["has-session", "-t", "meta-dev"])
+        .output()
+        .await;
+
+    let session_active = session_check.map(|o| o.status.success()).unwrap_or(false);
+
+    if !session_active {
+        println!("⚠️  No active meta-dev session. Run 'meta dev' to start.\n");
+    }
+
+    // Show running processes
+    println!("## Running Processes");
+    println!(
+        "{:<15} {:<10} {:<28} UPTIME",
+        "PROJECT", "PID", "STARTED"
+    );
+    println!("{}", "-".repeat(70));
+
+    for (name, proj) in &config.projects {
+        if let Some(ref filter) = project {
+            if name != filter {
+                continue;
+            }
+        }
+
+        // Find processes related to this project
+        // For Rust projects, try to get the actual binary name from Cargo.toml
+        let binary_name = if proj.project_type == "rust" {
+            get_rust_binary_name(&proj.path).unwrap_or_else(|| name.clone())
+        } else {
+            name.clone()
+        };
+
+        let search_pattern = if proj.project_type == "rust" {
+            format!("target/debug/{}", binary_name)
+        } else {
+            proj.path.clone()
+        };
+
+        let ps_output = Command::new("sh")
+            .args([
+                "-c",
+                &format!(
+                    "ps aux | grep -E '{}' | grep -v grep | head -1",
+                    search_pattern
+                ),
+            ])
+            .output()
+            .await;
+
+        if let Ok(output) = ps_output {
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            if !stdout.trim().is_empty() {
+                // Parse ps output to get PID
+                let parts: Vec<&str> = stdout.split_whitespace().collect();
+                if parts.len() >= 2 {
+                    let pid = parts[1];
+
+                    // Get detailed process info
+                    let detail_output = Command::new("ps")
+                        .args(["-p", pid, "-o", "pid,lstart,etime"])
+                        .output()
+                        .await;
+
+                    if let Ok(detail) = detail_output {
+                        let detail_str = String::from_utf8_lossy(&detail.stdout);
+                        let lines_vec: Vec<&str> = detail_str.lines().collect();
+                        if lines_vec.len() >= 2 {
+                            let info_parts: Vec<&str> = lines_vec[1].split_whitespace().collect();
+                            if info_parts.len() >= 6 {
+                                let started = info_parts[1..6].join(" ");
+                                let uptime = info_parts.last().unwrap_or(&"?");
+                                println!("{:<15} {:<10} {:<28} {}", name, pid, started, uptime);
+                            }
+                        }
+                    }
+                }
+            } else {
+                println!("{:<15} {:<10} {:<28} -", name, "-", "not running");
+            }
+        }
+    }
+
+    // Show recent log events
+    println!("\n## Recent Events (last {})", lines);
+    let log_path = std::path::Path::new(".meta/logs/dev.log");
+
+    if log_path.exists() {
+        let log_content = std::fs::read_to_string(log_path)?;
+        let log_lines: Vec<&str> = log_content.lines().collect();
+
+        let filtered_lines: Vec<&str> = if let Some(ref filter) = project {
+            log_lines
+                .iter()
+                .filter(|line| line.contains(&format!("[{}]", filter)))
+                .copied()
+                .collect()
+        } else {
+            log_lines
+        };
+
+        let start = filtered_lines.len().saturating_sub(lines);
+        for line in &filtered_lines[start..] {
+            println!("{}", line);
+        }
+
+        if filtered_lines.is_empty() {
+            println!("(no log entries yet)");
+        }
+    } else {
+        println!("(no log file yet - will be created on next 'meta dev')");
+    }
+
+    // Show binary modification times for Rust projects and detect stale processes
+    println!("\n## Binary Status (Rust projects)");
+    println!(
+        "# NOTE: If binary is newer than process, bacon rebuilt but process may be stale.\n# This \
+         can happen if bacon is running in check mode instead of run-long mode.\n"
+    );
+
+    for (name, proj) in &config.projects {
+        if proj.project_type != "rust" {
+            continue;
+        }
+        if let Some(ref filter) = project {
+            if name != filter {
+                continue;
+            }
+        }
+
+        // Get actual binary name from Cargo.toml
+        let binary_name = get_rust_binary_name(&proj.path).unwrap_or_else(|| name.clone());
+        let binary_path = format!("{}/target/debug/{}", proj.path, binary_name);
+        let path = std::path::Path::new(&binary_path);
+
+        if path.exists() {
+            if let Ok(metadata) = path.metadata() {
+                if let Ok(binary_modified) = metadata.modified() {
+                    let binary_age = std::time::SystemTime::now()
+                        .duration_since(binary_modified)
+                        .unwrap_or_default();
+
+                    // Check if there's a running process and compare times
+                    let search_pattern = format!("target/debug/{}", binary_name);
+                    let ps_output = Command::new("sh")
+                        .args([
+                            "-c",
+                            &format!(
+                                "ps aux | grep -E '{}' | grep -v grep | head -1",
+                                search_pattern
+                            ),
+                        ])
+                        .output()
+                        .await;
+
+                    let mut process_status = String::new();
+
+                    if let Ok(output) = ps_output {
+                        let stdout = String::from_utf8_lossy(&output.stdout);
+                        if !stdout.trim().is_empty() {
+                            let parts: Vec<&str> = stdout.split_whitespace().collect();
+                            if parts.len() >= 2 {
+                                let pid = parts[1];
+                                // Get elapsed time using ps -o etime (format: [[DD-]HH:]MM:SS)
+                                let etime_output = Command::new("ps")
+                                    .args(["-p", pid, "-o", "etime="])
+                                    .output()
+                                    .await;
+
+                                if let Ok(etime) = etime_output {
+                                    let etime_str =
+                                        String::from_utf8_lossy(&etime.stdout).trim().to_string();
+                                    if let Some(process_age_secs) = parse_etime(&etime_str) {
+                                        let binary_age_secs = binary_age.as_secs();
+
+                                        // Only consider stale if binary is more than 60 seconds
+                                        // newer than process (to avoid false positives from timing)
+                                        let stale_threshold_secs = 60;
+                                        if binary_age_secs + stale_threshold_secs < process_age_secs
+                                        {
+                                            // Binary is significantly newer than process - STALE!
+                                            let diff_secs = process_age_secs - binary_age_secs;
+                                            let diff_mins = diff_secs / 60;
+                                            process_status = format!(
+                                                " ⚠️  STALE: binary rebuilt {}m after process \
+                                                 started",
+                                                diff_mins
+                                            );
+                                        } else {
+                                            process_status = " ✓ running latest binary".to_string();
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    let mins = binary_age.as_secs() / 60;
+                    let hours = mins / 60;
+                    let age_str = if hours > 0 {
+                        format!("{}h {}m ago", hours, mins % 60)
+                    } else {
+                        format!("{}m ago", mins)
+                    };
+
+                    println!("{}: rebuilt {}{}", binary_path, age_str, process_status);
+                }
+            }
+        } else {
+            println!("{}: not built yet", binary_path);
+        }
+    }
+
+    println!();
+    Ok(())
+}
+
+/// Get the actual binary name from a Rust project's Cargo.toml
+/// Returns None if Cargo.toml doesn't exist or can't be parsed
+fn get_rust_binary_name(project_path: &str) -> Option<String> {
+    let cargo_path = std::path::Path::new(project_path).join("Cargo.toml");
+    let content = std::fs::read_to_string(cargo_path).ok()?;
+
+    // First check for [[bin]] section with name
+    // Then fall back to [package] name
+    for line in content.lines() {
+        let line = line.trim();
+        // Look for name = "..." pattern
+        if line.starts_with("name") && line.contains('=') {
+            if let Some(name_part) = line.split('=').nth(1) {
+                let name = name_part.trim().trim_matches('"').trim_matches('\'');
+                if !name.is_empty() {
+                    return Some(name.to_string());
+                }
+            }
+        }
+    }
+    None
+}
+
+/// Parse `ps -o etime` format: [[DD-]HH:]MM:SS
+/// Examples: "02:30" (2m30s), "01:02:30" (1h2m30s), "2-01:02:30" (2d1h2m30s)
+fn parse_etime(s: &str) -> Option<u64> {
+    let s = s.trim();
+    if s.is_empty() {
+        return None;
+    }
+
+    let mut total_secs: u64 = 0;
+
+    // Check for days (format: DD-HH:MM:SS)
+    let (days, rest) = if s.contains('-') {
+        let parts: Vec<&str> = s.splitn(2, '-').collect();
+        let days: u64 = parts[0].parse().ok()?;
+        (days, parts.get(1).copied().unwrap_or(""))
+    } else {
+        (0, s)
+    };
+
+    total_secs += days * 24 * 60 * 60;
+
+    // Parse HH:MM:SS or MM:SS
+    let time_parts: Vec<&str> = rest.split(':').collect();
+    match time_parts.len() {
+        2 => {
+            // MM:SS
+            let mins: u64 = time_parts[0].parse().ok()?;
+            let secs: u64 = time_parts[1].parse().ok()?;
+            total_secs += mins * 60 + secs;
+        }
+        3 => {
+            // HH:MM:SS
+            let hours: u64 = time_parts[0].parse().ok()?;
+            let mins: u64 = time_parts[1].parse().ok()?;
+            let secs: u64 = time_parts[2].parse().ok()?;
+            total_secs += hours * 60 * 60 + mins * 60 + secs;
+        }
+        _ => return None,
+    }
+
+    Some(total_secs)
+}
+
 /// Stop all running meta-dev tmux sessions
 pub async fn dev_stop() -> Result<()> {
     let session_name = "meta-dev";
@@ -141,18 +451,54 @@ async fn launch_tmux_session(commands: &[(String, String)]) -> Result<()> {
         .output()
         .await;
 
-    // Wrap commands in a shell that keeps the pane alive after the command exits
-    let wrap_command = |cmd: &str| -> String {
+    // Ensure log directory exists
+    let log_dir = std::path::Path::new(".meta/logs");
+    if !log_dir.exists() {
+        std::fs::create_dir_all(log_dir)?;
+    }
+
+    // Wrap commands in a shell that:
+    // 1. Logs process start/restart events to .meta/logs/dev.log
+    // 2. Keeps the pane alive after the command exits
+    // 3. Allows manual restart with Enter
+    //
+    // Log format (designed for easy parsing by Claude Code):
+    //   [TIMESTAMP] [PROJECT] EVENT: message (pid=PID)
+    //
+    // Example:
+    //   [2025-12-08T12:02:18] [api] START: Process started (pid=12345)
+    //   [2025-12-08T12:05:32] [api] RESTART: Process restarted after file change
+    // (pid=12346)   [2025-12-08T12:05:32] [api] EXIT: Process exited with code
+    // 0
+    let wrap_command = |name: &str, cmd: &str| -> String {
+        let log_file = ".meta/logs/dev.log";
         format!(
-            "{}; echo '\\n✓ Process exited. Press Ctrl+C to close or Enter to restart.'; read -r; \
-             {}",
-            cmd, cmd
+            r#"LOG_FILE="{log_file}"; \
+PROJECT="{name}"; \
+log_event() {{ echo "[$(date -u +%Y-%m-%dT%H:%M:%S)] [$PROJECT] $1" >> "$LOG_FILE"; }}; \
+run_with_logging() {{ \
+  log_event "START: Process started (pid=$$)"; \
+  {cmd}; \
+  EXIT_CODE=$?; \
+  log_event "EXIT: Process exited with code $EXIT_CODE"; \
+  return $EXIT_CODE; \
+}}; \
+run_with_logging; \
+while true; do \
+  echo '\n✓ Process exited. Press Enter to restart or Ctrl+C to close.'; \
+  read -r; \
+  log_event "RESTART: Manual restart triggered"; \
+  run_with_logging; \
+done"#,
+            log_file = log_file,
+            name = name,
+            cmd = cmd
         )
     };
 
     // Create new session with first command
     let first_cmd = &commands[0];
-    let wrapped_first = wrap_command(&first_cmd.1);
+    let wrapped_first = wrap_command(&first_cmd.0, &first_cmd.1);
     Command::new("tmux")
         .args(["new-session", "-d", "-s", session_name, "-n", &first_cmd.0])
         .arg(&wrapped_first)
@@ -161,7 +507,7 @@ async fn launch_tmux_session(commands: &[(String, String)]) -> Result<()> {
 
     // Add remaining commands as new panes
     for (name, cmd) in commands.iter().skip(1) {
-        let wrapped_cmd = wrap_command(cmd);
+        let wrapped_cmd = wrap_command(name, cmd);
         Command::new("tmux")
             .args(["split-window", "-t", session_name, "-h"])
             .arg(&wrapped_cmd)

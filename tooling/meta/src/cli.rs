@@ -25,6 +25,20 @@ pub enum Commands {
     #[command(name = "dev:stop")]
     DevStop,
 
+    /// Show status of running dev processes (useful for Claude Code)
+    ///
+    /// Displays process info, restart history, and binary modification times.
+    /// Log file: .meta/logs/dev.log
+    Status {
+        /// Show only entries for specific project
+        #[arg(short, long)]
+        project: Option<String>,
+
+        /// Number of recent log entries to show (default: 20)
+        #[arg(short, long, default_value = "20")]
+        lines: usize,
+    },
+
     /// Build projects
     Build {
         /// Production build

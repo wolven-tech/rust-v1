@@ -55,5 +55,9 @@ async fn main() -> Result<()> {
             let config = Config::load()?;
             execution::doctor(&config).await
         }
+        Commands::Status { project, lines } => {
+            let config = Config::load()?;
+            execution::status(&config, project, lines).await
+        }
     }
 }
