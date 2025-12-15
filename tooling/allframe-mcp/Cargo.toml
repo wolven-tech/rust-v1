@@ -1,0 +1,20 @@
+[package]
+name = "allframe-mcp"
+version = "0.1.0"
+edition = "2021"
+description = "AllFrame MCP server for the monorepo"
+
+[[bin]]
+name = "allframe-mcp"
+path = "src/main.rs"
+
+[dependencies]
+# AllFrame MCP from crates.io (v0.1.12 includes stdio module)
+allframe-mcp = "0.1.12"
+allframe-core = { version = "0.1.12", features = ["router"] }
+
+# Runtime
+tokio = { version = "1.0", features = ["full"] }
+
+# UUID for example handlers
+uuid = { version = "1.0", features = ["v4"] }

@@ -42,6 +42,23 @@ This service implements Clean Architecture with the following layers:
   - Request: `{ "email": "user@example.com", "userGroup": "newsletter" }`
   - Response: `{ "success": true, "message": "...", "id": "..." }`
 
+### AllFrame E-commerce
+- `POST /api/allframe/products/search` - Search products
+  - Request: `{ "query": "search term" }`
+  - Response: `{ "query": "...", "results": [{ "id": "1", "name": "Product A" }] }`
+
+- `POST /api/allframe/orders` - Create order
+  - Request: `{ "product": "Widget", "quantity": 1 }`
+  - Response: `{ "order_id": "uuid", "product": "Widget", "status": "created" }`
+
+- `POST /api/allframe/shipping/calculate` - Calculate shipping cost
+  - Request: `{ "weight": 10.0 }`
+  - Response: `{ "weight": 10.0, "cost": 30.0 }`
+
+- `POST /api/allframe/users` - Get user information
+  - Request: `{ "user_id": "optional-uuid" }`
+  - Response: `{ "id": "uuid", "name": "User Name", "email": "user@example.com" }`
+
 ## Development
 
 ### Prerequisites

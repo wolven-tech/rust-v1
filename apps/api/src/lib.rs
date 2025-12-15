@@ -1,7 +1,7 @@
 //! V1 API Library
 //!
 //! This library provides the core functionality for the V1 API service,
-//! implementing Clean Architecture patterns.
+//! implementing Clean Architecture patterns with AllFrame e-commerce integration.
 
 use std::time::Duration;
 
@@ -30,6 +30,10 @@ pub use infrastructure::AppState;
         presentation::handlers::root::root,
         presentation::handlers::health::health_check,
         presentation::handlers::subscribe::subscribe,
+        presentation::handlers::allframe::search_products,
+        presentation::handlers::allframe::create_order,
+        presentation::handlers::allframe::calculate_shipping,
+        presentation::handlers::allframe::get_user,
     ),
     components(
         schemas(
@@ -37,17 +41,27 @@ pub use infrastructure::AppState;
             presentation::dto::subscribe::SubscribeResponse,
             presentation::dto::subscribe::HealthResponse,
             presentation::dto::subscribe::RootResponse,
+            presentation::dto::allframe::SearchProductsRequest,
+            presentation::dto::allframe::SearchProductsResponse,
+            presentation::dto::allframe::Product,
+            presentation::dto::allframe::CreateOrderRequest,
+            presentation::dto::allframe::CreateOrderResponse,
+            presentation::dto::allframe::CalculateShippingRequest,
+            presentation::dto::allframe::CalculateShippingResponse,
+            presentation::dto::allframe::GetUserRequest,
+            presentation::dto::allframe::UserResponse,
         )
     ),
     tags(
         (name = "general", description = "General endpoints"),
         (name = "health", description = "Health check endpoints"),
         (name = "subscription", description = "Newsletter subscription"),
+        (name = "allframe", description = "AllFrame e-commerce endpoints"),
     ),
     info(
         title = "V1 API",
         version = "1.0.0",
-        description = "API for V1 application",
+        description = "API for V1 application with AllFrame e-commerce integration",
     )
 )]
 struct ApiDoc;
@@ -58,10 +72,27 @@ pub fn create_router(state: AppState) -> Router {
         .route("/", get(presentation::handlers::root::root))
         // Health check
         .route("/health", get(presentation::handlers::health::health_check))
-        // API routes
+        // API routes - Subscription
         .route(
             "/api/subscribe",
             post(presentation::handlers::subscribe::subscribe),
+        )
+        // API routes - AllFrame e-commerce
+        .route(
+            "/api/allframe/products/search",
+            post(presentation::handlers::allframe::search_products),
+        )
+        .route(
+            "/api/allframe/orders",
+            post(presentation::handlers::allframe::create_order),
+        )
+        .route(
+            "/api/allframe/shipping/calculate",
+            post(presentation::handlers::allframe::calculate_shipping),
+        )
+        .route(
+            "/api/allframe/users",
+            post(presentation::handlers::allframe::get_user),
         )
         // API documentation
         .merge(Scalar::with_url("/api/docs", ApiDoc::openapi()))

@@ -1,5 +1,12 @@
 {
   "mcpServers": {
+    "allframe": {
+      "command": "./tooling/allframe-mcp/target/debug/allframe-mcp",
+      "args": [],
+      "env": {
+        "ALLFRAME_MCP_DEBUG": "1"
+      }
+    },
     "playwright": {
       "command": "bunx",
       "args": ["@playwright/mcp@latest"]
