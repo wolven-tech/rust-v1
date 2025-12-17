@@ -4,7 +4,6 @@
 
 use allframe::reqwest;
 use allframe::serde_json;
-use serde::Serialize;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -73,12 +72,6 @@ impl ApiError {
         })
         .to_string()
     }
-}
-
-#[derive(Serialize)]
-struct ErrorResponse {
-    error: String,
-    message: String,
 }
 
 impl From<anyhow::Error> for ApiError {

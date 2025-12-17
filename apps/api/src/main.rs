@@ -31,6 +31,27 @@ async fn handle_request(
 
     info!("Incoming request: {} {}", method, path);
 
+    // Handle documentation routes specially
+    if path == "/docs" {
+        let html = router.scalar("V1 API", env!("CARGO_PKG_VERSION"));
+        return Ok(Response::builder()
+            .status(StatusCode::OK)
+            .header("Content-Type", "text/html; charset=utf-8")
+            .header("Access-Control-Allow-Origin", "*")
+            .body(Full::new(Bytes::from(html)))
+            .unwrap());
+    }
+
+    if path == "/docs/openapi.json" {
+        let openapi = router.openapi_json("V1 API", env!("CARGO_PKG_VERSION"));
+        return Ok(Response::builder()
+            .status(StatusCode::OK)
+            .header("Content-Type", "application/json")
+            .header("Access-Control-Allow-Origin", "*")
+            .body(Full::new(Bytes::from(openapi)))
+            .unwrap());
+    }
+
     // Route to appropriate handler
     let response_body = match route_to_handler(method, path) {
         Some(handler_name) => {
@@ -102,7 +123,8 @@ async fn main() -> Result<()> {
     println!("   → Powered by AllFrame");
     println!("   → Local:   http://localhost:{}", local_addr.port());
     println!("   → Network: http://0.0.0.0:{}", local_addr.port());
-    println!("   → Health:  http://localhost:{}/health\n", local_addr.port());
+    println!("   → Health:  http://localhost:{}/health", local_addr.port());
+    println!("   → Docs:    http://localhost:{}/docs\n", local_addr.port());
 
     info!("V1 API server started on port {}", local_addr.port());
 
