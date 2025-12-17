@@ -14,10 +14,10 @@ const DepartureMono = localFont({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://v1.run"),
+  metadataBase: new URL("https://rust-v1.dev"),
   title: "Create v1",
   description:
-    "A free, open-source starter kit for your next project, built with insights from Midday.",
+    "A free, open-source starter kit for your next project, by Wolven Tech.",
 };
 
 export default function RootLayout({

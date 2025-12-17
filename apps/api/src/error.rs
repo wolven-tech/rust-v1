@@ -1,8 +1,9 @@
-use axum::{
-    http::StatusCode,
-    response::{IntoResponse, Response},
-    Json,
-};
+//! API Error types
+//!
+//! Defines error types for the API using AllFrame patterns.
+
+use allframe::reqwest;
+use allframe::serde_json;
 use serde::Serialize;
 use thiserror::Error;
 
@@ -45,27 +46,20 @@ impl ApiError {
         Self::ConfigError(msg.into())
     }
 
-    fn status_code(&self) -> StatusCode {
+    /// Get the HTTP status code for this error
+    pub fn status_code(&self) -> u16 {
         match self {
-            Self::BadRequest(_) => StatusCode::BAD_REQUEST,
-            Self::NotFound(_) => StatusCode::NOT_FOUND,
-            Self::InternalServerError(_) => StatusCode::INTERNAL_SERVER_ERROR,
-            Self::ExternalServiceError(_) => StatusCode::BAD_GATEWAY,
-            Self::ConfigError(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            Self::BadRequest(_) => 400,
+            Self::NotFound(_) => 404,
+            Self::InternalServerError(_) => 500,
+            Self::ExternalServiceError(_) => 502,
+            Self::ConfigError(_) => 500,
         }
     }
-}
 
-#[derive(Serialize)]
-struct ErrorResponse {
-    error: String,
-    message: String,
-}
-
-impl IntoResponse for ApiError {
-    fn into_response(self) -> Response {
-        let status_code = self.status_code();
-        let error_type = match &self {
+    /// Convert error to JSON response
+    pub fn to_json(&self) -> String {
+        let error_type = match self {
             Self::BadRequest(_) => "Bad Request",
             Self::NotFound(_) => "Not Found",
             Self::InternalServerError(_) => "Internal Server Error",
@@ -73,13 +67,18 @@ impl IntoResponse for ApiError {
             Self::ConfigError(_) => "Configuration Error",
         };
 
-        let body = Json(ErrorResponse {
-            error: error_type.to_string(),
-            message: self.to_string(),
-        });
-
-        (status_code, body).into_response()
+        serde_json::json!({
+            "error": error_type,
+            "message": self.to_string()
+        })
+        .to_string()
     }
+}
+
+#[derive(Serialize)]
+struct ErrorResponse {
+    error: String,
+    message: String,
 }
 
 impl From<anyhow::Error> for ApiError {

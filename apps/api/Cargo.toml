@@ -2,34 +2,28 @@
 name = "api"
 version = "1.0.0"
 edition = "2021"
-authors = ["V1 Team"]
-description = "V1 API Service - REST API with optional gRPC support"
+authors = ["Wolven Tech"]
+description = "V1 API Service - REST API powered by AllFrame"
 
 [[bin]]
 name = "api"
 path = "src/main.rs"
 
 [dependencies]
-# Web framework
-axum = "0.7"
-tower = "0.4"
-tower-http = { version = "0.5", features = ["cors", "trace", "timeout"] }
-hyper = { version = "1.0", features = ["full"] }
-tokio = { version = "1.0", features = ["full"] }
-socket2 = { version = "0.5", features = ["all"] }
+# AllFrame framework - provides router, http client, json, chrono, hyper, tokio
+allframe = { version = "0.1", features = ["router", "health", "http-client", "utils"] }
 
-# Async traits
-async-trait = "0.1"
+# HTTP utilities for hyper server
+hyper-util = { version = "0.1", features = ["tokio", "server", "server-auto"] }
+http-body-util = "0.1"
+bytes = "1.0"
 
-# Serialization
+# Serde - needed directly for derive macros (can't use re-export)
 serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
 
-# HTTP client for external APIs (Loops API)
-reqwest = { version = "0.12", features = ["json"] }
-
-# Date/time
-chrono = { version = "0.4", features = ["serde"] }
+# Tracing - needed directly for #[instrument] macro
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 # UUID generation
 uuid = { version = "1.0", features = ["v4"] }
@@ -38,35 +32,13 @@ uuid = { version = "1.0", features = ["v4"] }
 thiserror = "2.0"
 anyhow = "1.0"
 
-# Logging and tracing
-tracing = "0.1"
-tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
-
-# OpenAPI documentation
-utoipa = { version = "4.2", features = ["axum_extras"] }
-utoipa-scalar = { version = "0.1", features = ["axum"] }
-
-# gRPC (optional for future microservices)
-tonic = { version = "0.12", features = ["tls"], optional = true }
-prost = { version = "0.13", optional = true }
-
 # Environment variables
 dotenvy = "0.15"
-
-# Configuration
-config = "0.14"
-
-[build-dependencies]
-tonic-build = { version = "0.12", optional = true }
 
 [dev-dependencies]
 mockall = "0.13"
 wiremock = "0.6"
 futures = "0.3"
 tokio-test = "0.4"
-tower = { version = "0.4", features = ["util"] }
-cargo-sort = "2.0.2"
-
-[features]
-default = []
-grpc = ["tonic", "prost", "tonic-build"]
+tokio = { version = "1.0", features = ["rt-multi-thread", "macros"] }
+serde_json = "1.0"

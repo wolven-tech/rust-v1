@@ -1,16 +1,12 @@
 use serde::{Deserialize, Serialize};
-use utoipa::ToSchema;
 
-#[derive(Debug, Deserialize, ToSchema)]
+#[derive(Debug, Deserialize)]
 pub struct SubscribeRequest {
-    #[schema(example = "user@example.com")]
     pub email: String,
-
-    #[schema(example = "newsletter")]
     pub user_group: String,
 }
 
-#[derive(Debug, Serialize, ToSchema)]
+#[derive(Debug, Serialize)]
 pub struct SubscribeResponse {
     pub success: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -19,14 +15,14 @@ pub struct SubscribeResponse {
     pub id: Option<String>,
 }
 
-#[derive(Debug, Serialize, ToSchema)]
+#[derive(Debug, Serialize)]
 pub struct HealthResponse {
     pub status: String,
     pub timestamp: String,
     pub version: String,
 }
 
-#[derive(Debug, Serialize, ToSchema)]
+#[derive(Debug, Serialize)]
 pub struct RootResponse {
     pub message: String,
     pub version: String,

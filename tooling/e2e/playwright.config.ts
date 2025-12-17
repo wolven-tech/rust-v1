@@ -1,7 +1,8 @@
 import { defineConfig, devices } from "@playwright/test";
 
-const API_URL = process.env.API_URL || "http://localhost:3002";
+const API_URL = process.env.API_URL || "http://localhost:4400";
 const WEB_URL = process.env.WEB_URL || "http://localhost:3001";
+const APP_URL = process.env.APP_URL || "http://localhost:4402";
 
 export default defineConfig({
   testDir: "./tests",
@@ -23,20 +24,4 @@ export default defineConfig({
       use: { ...devices["Desktop Chrome"] },
     },
   ],
-
-  // Optional: Auto-start servers (comment out if servers are already running)
-  // webServer: [
-  //   {
-  //     command: "cd ../../apps/api && bun run dev",
-  //     url: API_URL,
-  //     reuseExistingServer: !process.env.CI,
-  //     timeout: 120 * 1000,
-  //   },
-  //   {
-  //     command: "cd ../../apps/web && bun run dev",
-  //     url: WEB_URL,
-  //     reuseExistingServer: !process.env.CI,
-  //     timeout: 120 * 1000,
-  //   },
-  // ],
 });

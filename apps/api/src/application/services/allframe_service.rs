@@ -3,9 +3,11 @@ use uuid::Uuid;
 
 use crate::{
     error::ApiError,
-    presentation::dto::allframe::{
-        CalculateShippingResponse, CreateOrderResponse, Product, SearchProductsResponse,
-        UserResponse,
+    presentation::dto::{
+        orders::CreateOrderResponse,
+        products::{Product, SearchProductsResponse},
+        shipping::CalculateShippingResponse,
+        users::UserResponse,
     },
 };
 

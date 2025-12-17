@@ -1,0 +1,1 @@
+warning|/Users/decebaldobrica/Projects/open-source/rust-v1/apps/api/src/error.rs:77:8|struct `ErrorResponse` is never constructed
