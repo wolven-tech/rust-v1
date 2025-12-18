@@ -1,7 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 
 const API_URL = process.env.API_URL || "http://localhost:4400";
-const WEB_URL = process.env.WEB_URL || "http://localhost:3001";
+const WEB_URL = process.env.WEB_URL || "http://localhost:4401";
 const APP_URL = process.env.APP_URL || "http://localhost:4402";
 
 export default defineConfig({

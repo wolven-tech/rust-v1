@@ -22,9 +22,9 @@ export function Header() {
           src="/logo.png"
           alt="V1 logo"
           width={60}
-          quality={100}
           height={60}
-          className="md:absolute md:left-1/2 md:top-5 md:-translate-x-1/2"
+          quality={100}
+          className="md:absolute md:left-1/2 md:top-5 md:-translate-x-1/2 rounded-full"
         />
       </Link>
 

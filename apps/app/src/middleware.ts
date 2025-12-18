@@ -14,8 +14,16 @@ export async function middleware(request: NextRequest) {
     I18nMiddleware(request),
   );
 
-  if (!request.nextUrl.pathname.endsWith("/login") && !user) {
+  const isLoginRoute = request.nextUrl.pathname.endsWith("/login");
+
+  // Redirect unauthenticated users to login
+  if (!isLoginRoute && !user) {
     return NextResponse.redirect(new URL("/login", request.url));
+  }
+
+  // Redirect authenticated users from login to dashboard
+  if (isLoginRoute && user) {
+    return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
   return response;

@@ -1,3 +1,4 @@
+pub mod metrics;
 pub mod orders;
 pub mod products;
 pub mod shipping;

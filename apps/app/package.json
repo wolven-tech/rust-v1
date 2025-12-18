@@ -19,6 +19,7 @@
     "@rust-v1/react-query": "workspace:*",
     "@rust-v1/supabase": "workspace:*",
     "@rust-v1/ui": "workspace:*",
+    "@sentry/core": "^8",
     "@sentry/nextjs": "^8",
     "@supabase/sentry-js-integration": "^0.2.0",
     "dub": "^0.36.5",

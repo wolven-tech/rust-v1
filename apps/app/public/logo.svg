@@ -1,0 +1,61 @@
+<svg width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Circular background with gradient -->
+  <defs>
+    <linearGradient id="moonGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#2d3748"/>
+      <stop offset="100%" style="stop-color:#1a202c"/>
+    </linearGradient>
+    <clipPath id="circleClip">
+      <circle cx="100" cy="100" r="95"/>
+    </clipPath>
+  </defs>
+
+  <!-- Main circle background -->
+  <circle cx="100" cy="100" r="95" fill="url(#moonGradient)"/>
+
+  <!-- Moon glow -->
+  <circle cx="100" cy="85" r="55" fill="#4a5568" opacity="0.3"/>
+  <circle cx="100" cy="85" r="45" fill="#718096" opacity="0.2"/>
+
+  <!-- Pine trees silhouette -->
+  <g clip-path="url(#circleClip)">
+    <!-- Left tree -->
+    <path d="M25 195 L45 140 L35 145 L50 110 L40 115 L55 80 L45 85 L55 60 L65 85 L55 80 L70 115 L60 110 L75 145 L65 140 L85 195 Z" fill="#1a202c"/>
+    <!-- Right tree -->
+    <path d="M145 195 L160 150 L152 154 L165 125 L158 128 L170 100 L163 103 L172 85 L180 103 L173 100 L185 128 L178 125 L190 154 L182 150 L195 195 Z" fill="#1a202c"/>
+
+    <!-- Wolf silhouette -->
+    <g transform="translate(55, 75)">
+      <!-- Wolf body -->
+      <path d="M10 120
+               Q15 110 20 100
+               Q25 85 35 75
+               Q40 70 45 68
+               L48 60 L52 65 L55 58 L60 63
+               Q65 60 70 55
+               Q72 50 70 45
+               L75 40 L72 35 L78 30
+               Q82 28 85 30
+               Q88 35 85 40
+               Q82 45 80 48
+               Q78 55 75 60
+               Q72 65 68 70
+               Q75 72 80 78
+               Q85 85 85 95
+               Q85 105 80 115
+               Q78 118 75 120
+               Z"
+            fill="#1a202c"/>
+      <!-- Wolf ear -->
+      <path d="M70 45 Q75 35 72 30 Q78 32 75 40 Z" fill="#1a202c"/>
+      <!-- Wolf tail -->
+      <path d="M10 115 Q0 105 5 95 Q10 100 15 108 Z" fill="#1a202c"/>
+    </g>
+
+    <!-- Ground/hill -->
+    <ellipse cx="100" cy="210" rx="110" ry="30" fill="#1a202c"/>
+  </g>
+
+  <!-- Subtle border -->
+  <circle cx="100" cy="100" r="94" fill="none" stroke="#4a5568" stroke-width="1" opacity="0.5"/>
+</svg>

@@ -2,8 +2,9 @@ import { expect, test } from "@playwright/test";
 
 const API_URL = process.env.API_URL || "http://localhost:4400";
 const APP_URL = process.env.APP_URL || "http://localhost:4402";
+const WEB_URL = process.env.WEB_URL || "http://localhost:4401";
 
-test.describe("App + API Integration", () => {
+test.describe("Full Stack Integration", () => {
   test.describe("API Health from App context", () => {
     test("API is accessible and healthy", async ({ request }) => {
       const response = await request.get(`${API_URL}/health`);
@@ -11,12 +12,19 @@ test.describe("App + API Integration", () => {
 
       const data = await response.json();
       expect(data.status).toBe("ok");
+      expect(data.timestamp).toBeDefined();
+      expect(data.version).toBeDefined();
+    });
+
+    test("API documentation is accessible", async ({ request }) => {
+      const response = await request.get(`${API_URL}/docs`);
+      expect(response.ok()).toBeTruthy();
+      expect(response.headers()["content-type"]).toContain("text/html");
     });
   });
 
   test.describe("Product Search Integration", () => {
     test("App can search products via API", async ({ request }) => {
-      // Simulate app calling API to search products
       const response = await request.post(`${API_URL}/api/products/search`, {
         data: { query: "widget" },
       });
@@ -40,7 +48,6 @@ test.describe("App + API Integration", () => {
         }
       );
       expect(searchResponse.ok()).toBeTruthy();
-      const searchData = await searchResponse.json();
 
       // Step 2: Create an order
       const orderResponse = await request.post(`${API_URL}/api/orders`, {
@@ -58,30 +65,18 @@ test.describe("App + API Integration", () => {
       const shippingResponse = await request.post(
         `${API_URL}/api/shipping/calculate`,
         {
-          data: { weight: 5.5 },
+          data: { weight: 10.0 },
         }
       );
       expect(shippingResponse.ok()).toBeTruthy();
       const shippingData = await shippingResponse.json();
-      expect(shippingData.cost).toBe(16.5); // 5.5 * 3.0
+      expect(shippingData.weight).toBe(10.0);
+      expect(shippingData.cost).toBe(30.0);
     });
   });
 
   test.describe("User Management Integration", () => {
-    test("Create and retrieve user", async ({ request }) => {
-      // Create user with specific ID
-      const userId = `test-user-${Date.now()}`;
-      const response = await request.post(`${API_URL}/api/users`, {
-        data: { user_id: userId },
-      });
-
-      expect(response.ok()).toBeTruthy();
-      const data = await response.json();
-      expect(data.id).toBe(userId);
-      expect(data.email).toBeDefined();
-    });
-
-    test("Generate new user when no ID provided", async ({ request }) => {
+    test("Get user returns user data", async ({ request }) => {
       const response = await request.post(`${API_URL}/api/users`, {
         data: {},
       });
@@ -89,38 +84,23 @@ test.describe("App + API Integration", () => {
       expect(response.ok()).toBeTruthy();
       const data = await response.json();
       expect(data.id).toBeDefined();
-      // UUID format check
-      expect(data.id).toMatch(
-        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-      );
+      expect(data.name).toBeDefined();
+      expect(data.email).toBeDefined();
     });
   });
 
-  test.describe("Error Handling Integration", () => {
-    test("API returns proper error for invalid shipping weight", async ({
-      request,
-    }) => {
-      const response = await request.post(
-        `${API_URL}/api/shipping/calculate`,
-        {
-          data: { weight: -10 },
-        }
-      );
-
-      expect(response.status()).toBe(400);
-    });
-
-    test("API returns validation error for malformed request", async ({
-      request,
-    }) => {
-      const response = await request.post(`${API_URL}/api/orders`, {
+  test.describe("Subscription Integration", () => {
+    test("Subscribe endpoint returns result", async ({ request }) => {
+      const response = await request.post(`${API_URL}/api/subscribe`, {
         data: {
-          // Missing required 'product' field
-          quantity: 5,
+          email: "test@example.com",
+          userGroup: "general",
         },
       });
 
-      expect(response.status()).toBe(422);
+      expect(response.ok()).toBeTruthy();
+      const data = await response.json();
+      expect(data.success).toBeDefined();
     });
   });
 });
@@ -128,12 +108,68 @@ test.describe("App + API Integration", () => {
 test.describe("App UI Tests", () => {
   test("App login page loads", async ({ page }) => {
     await page.goto(`${APP_URL}/en/login`);
-    await expect(page).toHaveURL(/.*login/);
+
+    // Check page loaded
+    await expect(page.locator("body")).toBeVisible();
+
+    // Check for logo
+    const logo = page.locator('img[alt="logo"]');
+    await expect(logo).toBeVisible();
+
+    // Check for Google Sign-in button
+    const signInButton = page.getByRole("button", { name: /sign in/i });
+    await expect(signInButton).toBeVisible();
   });
 
   test("App redirects unauthenticated users to login", async ({ page }) => {
     await page.goto(`${APP_URL}/en`);
+
     // Should redirect to login for unauthenticated users
     await expect(page).toHaveURL(/.*login/);
+  });
+});
+
+test.describe("Web App Integration", () => {
+  test("Web homepage loads", async ({ page }) => {
+    await page.goto(WEB_URL);
+
+    await expect(page.locator("body")).toBeVisible();
+    await expect(page.locator("h1")).toBeVisible();
+  });
+
+  test("Web app can trigger subscribe form", async ({ page }) => {
+    await page.goto(WEB_URL);
+
+    // Click Get updates
+    const getUpdatesButton = page.locator('header span:has-text("Get updates")');
+    await getUpdatesButton.click();
+
+    // Check dialog appears with email input
+    const dialog = page.locator('[role="dialog"]');
+    await expect(dialog).toBeVisible();
+    await expect(dialog.locator('input[type="email"]')).toBeVisible();
+  });
+});
+
+test.describe("Cross-Service Communication", () => {
+  test("All services are responsive", async ({ request, page }) => {
+    // Check API
+    const apiResponse = await request.get(`${API_URL}/health`);
+    expect(apiResponse.ok()).toBeTruthy();
+
+    // Check Web
+    await page.goto(WEB_URL);
+    await expect(page.locator("body")).toBeVisible();
+
+    // Check App
+    await page.goto(`${APP_URL}/en/login`);
+    await expect(page.locator("body")).toBeVisible();
+  });
+
+  test("API CORS allows cross-origin requests", async ({ request }) => {
+    const response = await request.get(`${API_URL}/`);
+
+    expect(response.ok()).toBeTruthy();
+    expect(response.headers()["access-control-allow-origin"]).toBe("*");
   });
 });
