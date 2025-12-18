@@ -1,5 +1,12 @@
 import { createServerClient } from "@supabase/ssr";
+import type { ResponseCookie } from "next/dist/compiled/@edge-runtime/cookies";
 import type { NextRequest, NextResponse } from "next/server";
+
+interface CookieToSet {
+  name: string;
+  value: string;
+  options?: Partial<ResponseCookie>;
+}
 
 export const updateSession = async (
   request: NextRequest,
@@ -13,7 +20,7 @@ export const updateSession = async (
         getAll() {
           return request.cookies.getAll();
         },
-        setAll(cookiesToSet) {
+        setAll(cookiesToSet: CookieToSet[]) {
           for (const { name, value } of cookiesToSet) {
             request.cookies.set(name, value);
           }
