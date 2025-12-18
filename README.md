@@ -378,12 +378,12 @@ MIT License - See [LICENSE.md](LICENSE.md)
 
 <div align="center">
 
-**Built with ❤️ by [Wolven Tech](https://wolven.tech)**
+**Built with ❤️ by [Wolven Tech](https://github.com/wolven-tech)**
 
 Created by [Decebal Dobrica](https://decebaldobrica.com)
 
-[![Wolven Tech](https://img.shields.io/badge/Wolven_Tech-Visit_Website-purple?style=for-the-badge)](https://wolven.tech)
-[![Twitter](https://img.shields.io/badge/Twitter-Follow-1DA1F2?style=for-the-badge&logo=twitter&logoColor=white)](https://twitter.com/decebaldobrica)
+[![Wolven Tech](https://img.shields.io/badge/Wolven_Tech-GitHub-purple?style=for-the-badge&logo=github)](https://github.com/wolven-tech)
+[![X](https://img.shields.io/badge/X-Follow-000000?style=for-the-badge&logo=x&logoColor=white)](https://x.com/ddonprogramming)
 
 </div>
 
