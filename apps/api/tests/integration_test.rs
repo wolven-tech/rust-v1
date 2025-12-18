@@ -3,6 +3,7 @@
 //! These tests use AllFrame's router directly to test handlers.
 
 use std::sync::Arc;
+
 use api::{create_router, AppState, Config};
 
 #[tokio::test]

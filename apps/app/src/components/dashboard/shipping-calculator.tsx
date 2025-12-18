@@ -1,11 +1,11 @@
 "use client";
 
+import type { ShippingCost } from "@/domain/api";
+import { useCalculateShipping } from "@/hooks/api";
 import { Button } from "@rust-v1/ui/button";
 import { Icons } from "@rust-v1/ui/icons";
 import { Input } from "@rust-v1/ui/input";
 import { useState } from "react";
-import { useCalculateShipping } from "@/hooks/api";
-import type { ShippingCost } from "@/domain/api";
 
 export function ShippingCalculator() {
   const [weight, setWeight] = useState("");
@@ -15,9 +15,9 @@ export function ShippingCalculator() {
   const shippingMutation = useCalculateShipping();
 
   const handleCalculate = async () => {
-    const weightNum = parseFloat(weight);
+    const weightNum = Number.parseFloat(weight);
 
-    if (isNaN(weightNum) || weightNum <= 0) {
+    if (Number.isNaN(weightNum) || weightNum <= 0) {
       setValidationError("Please enter a valid positive weight");
       setResult(null);
       return;
@@ -48,7 +48,9 @@ export function ShippingCalculator() {
           <Icons.Calculator className="size-5 text-blue-400" />
         </div>
         <div>
-          <h2 className="text-xl font-semibold text-white">Shipping Calculator</h2>
+          <h2 className="text-xl font-semibold text-white">
+            Shipping Calculator
+          </h2>
           <p className="text-sm text-slate-400">Estimate delivery costs</p>
         </div>
       </div>
@@ -92,7 +94,10 @@ export function ShippingCalculator() {
           <div className="h-px bg-white/10" />
           <div className="flex items-center justify-between">
             <span className="text-slate-400">Shipping Cost</span>
-            <span data-testid="shipping-cost" className="font-bold text-2xl text-blue-400">
+            <span
+              data-testid="shipping-cost"
+              className="font-bold text-2xl text-blue-400"
+            >
               ${result.cost.toFixed(2)}
             </span>
           </div>

@@ -1,7 +1,8 @@
 //! AllFrame API Client
 //!
 //! This module provides an HTTP client for communicating with the AllFrame API.
-//! It supports product search, order creation, shipping calculation, and user management.
+//! It supports product search, order creation, shipping calculation, and user
+//! management.
 
 use allframe::reqwest::Client;
 use serde::{Deserialize, Serialize};
@@ -114,7 +115,9 @@ impl AllFrameClient {
         let client = Client::builder()
             .timeout(std::time::Duration::from_secs(config.timeout_secs))
             .build()
-            .map_err(|e| ApiError::external_service_error(format!("Failed to create HTTP client: {}", e)))?;
+            .map_err(|e| {
+                ApiError::external_service_error(format!("Failed to create HTTP client: {}", e))
+            })?;
 
         Ok(Self { client, config })
     }
@@ -150,10 +153,9 @@ impl AllFrameClient {
             )));
         }
 
-        response
-            .json()
-            .await
-            .map_err(|e| ApiError::external_service_error(format!("Failed to parse response: {}", e)))
+        response.json().await.map_err(|e| {
+            ApiError::external_service_error(format!("Failed to parse response: {}", e))
+        })
     }
 
     /// Create an order
@@ -163,7 +165,10 @@ impl AllFrameClient {
         product: String,
         quantity: u32,
     ) -> Result<CreateOrderResponse, ApiError> {
-        info!("Creating order for product: {}, quantity: {}", product, quantity);
+        info!(
+            "Creating order for product: {}, quantity: {}",
+            product, quantity
+        );
 
         let url = format!("{}/api/orders", self.config.base_url);
         let request = CreateOrderRequest { product, quantity };
@@ -186,15 +191,17 @@ impl AllFrameClient {
             )));
         }
 
-        response
-            .json()
-            .await
-            .map_err(|e| ApiError::external_service_error(format!("Failed to parse response: {}", e)))
+        response.json().await.map_err(|e| {
+            ApiError::external_service_error(format!("Failed to parse response: {}", e))
+        })
     }
 
     /// Calculate shipping cost
     #[instrument(skip(self))]
-    pub async fn calculate_shipping(&self, weight: f64) -> Result<CalculateShippingResponse, ApiError> {
+    pub async fn calculate_shipping(
+        &self,
+        weight: f64,
+    ) -> Result<CalculateShippingResponse, ApiError> {
         info!("Calculating shipping for weight: {}", weight);
 
         let url = format!("{}/api/shipping/calculate", self.config.base_url);
@@ -218,10 +225,9 @@ impl AllFrameClient {
             )));
         }
 
-        response
-            .json()
-            .await
-            .map_err(|e| ApiError::external_service_error(format!("Failed to parse response: {}", e)))
+        response.json().await.map_err(|e| {
+            ApiError::external_service_error(format!("Failed to parse response: {}", e))
+        })
     }
 
     /// Get user information
@@ -250,18 +256,20 @@ impl AllFrameClient {
             )));
         }
 
-        response
-            .json()
-            .await
-            .map_err(|e| ApiError::external_service_error(format!("Failed to parse response: {}", e)))
+        response.json().await.map_err(|e| {
+            ApiError::external_service_error(format!("Failed to parse response: {}", e))
+        })
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use wiremock::{
+        matchers::{body_json, method, path},
+        Mock, MockServer, ResponseTemplate,
+    };
+
     use super::*;
-    use wiremock::matchers::{body_json, method, path};
-    use wiremock::{Mock, MockServer, ResponseTemplate};
 
     #[tokio::test]
     async fn test_search_products_success() {
@@ -436,7 +444,10 @@ mod tests {
 
         Mock::given(method("POST"))
             .and(path("/api/products/search"))
-            .and(wiremock::matchers::header("Authorization", "Bearer test-api-key"))
+            .and(wiremock::matchers::header(
+                "Authorization",
+                "Bearer test-api-key",
+            ))
             .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
                 "query": "test",
                 "results": []

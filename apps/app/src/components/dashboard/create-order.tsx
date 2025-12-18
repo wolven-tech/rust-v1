@@ -1,11 +1,11 @@
 "use client";
 
+import type { Order, Product } from "@/domain/api";
+import { useCreateOrder, useSearchProducts } from "@/hooks/api";
 import { Button } from "@rust-v1/ui/button";
 import { Icons } from "@rust-v1/ui/icons";
 import { Input } from "@rust-v1/ui/input";
 import { useState } from "react";
-import { useSearchProducts, useCreateOrder } from "@/hooks/api";
-import type { Product, Order } from "@/domain/api";
 
 export function CreateOrder() {
   const [query, setQuery] = useState("");
@@ -40,8 +40,8 @@ export function CreateOrder() {
   const handleCreateOrder = async () => {
     if (!selectedProduct) return;
 
-    const quantityNum = parseInt(quantity, 10);
-    if (isNaN(quantityNum) || quantityNum <= 0) return;
+    const quantityNum = Number.parseInt(quantity, 10);
+    if (Number.isNaN(quantityNum) || quantityNum <= 0) return;
 
     orderMutation.mutate(
       { product: selectedProduct.name, quantity: quantityNum },
@@ -70,7 +70,9 @@ export function CreateOrder() {
         </div>
         <div>
           <h2 className="text-xl font-semibold text-white">Create Order</h2>
-          <p className="text-sm text-slate-400">Search products and place an order</p>
+          <p className="text-sm text-slate-400">
+            Search products and place an order
+          </p>
         </div>
       </div>
 
@@ -117,8 +119,12 @@ export function CreateOrder() {
                     }`}
                   >
                     <div className="flex items-center justify-between">
-                      <span className="font-medium text-white">{product.name}</span>
-                      <span className="text-xs text-slate-500 font-mono">#{product.id}</span>
+                      <span className="font-medium text-white">
+                        {product.name}
+                      </span>
+                      <span className="text-xs text-slate-500 font-mono">
+                        #{product.id}
+                      </span>
                     </div>
                   </button>
                 ))}
@@ -133,7 +139,9 @@ export function CreateOrder() {
         <div className="p-4 rounded-xl bg-white/5 border border-white/10 space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs text-slate-500 uppercase">Selected Product</p>
+              <p className="text-xs text-slate-500 uppercase">
+                Selected Product
+              </p>
               <p className="text-white font-medium">{selectedProduct.name}</p>
             </div>
             <button
@@ -147,7 +155,9 @@ export function CreateOrder() {
 
           <div className="flex gap-3">
             <div className="flex-1">
-              <label className="text-xs text-slate-500 uppercase block mb-1">Quantity</label>
+              <label className="text-xs text-slate-500 uppercase block mb-1">
+                Quantity
+              </label>
               <Input
                 type="number"
                 min="1"
@@ -157,7 +167,11 @@ export function CreateOrder() {
               />
             </div>
             <div className="flex items-end">
-              <Button onClick={handleCreateOrder} disabled={isOrdering} className="gap-2">
+              <Button
+                onClick={handleCreateOrder}
+                disabled={isOrdering}
+                className="gap-2"
+              >
                 {isOrdering ? (
                   <Icons.Loader className="size-4 animate-spin" />
                 ) : (
@@ -194,7 +208,10 @@ export function CreateOrder() {
           <div className="grid grid-cols-3 gap-3 text-sm">
             <div>
               <p className="text-slate-500 text-xs uppercase">Order ID</p>
-              <p data-testid="order-id" className="font-mono text-white text-xs">
+              <p
+                data-testid="order-id"
+                className="font-mono text-white text-xs"
+              >
                 {orderResult.order_id.slice(0, 8)}...
               </p>
             </div>

@@ -1,8 +1,8 @@
 "use client";
 
-import { useMutation, useQueryClient } from "@rust-v1/react-query";
 import { searchProductsAction } from "@/actions/api";
 import type { SearchProductsResponse } from "@/domain/api";
+import { useMutation, useQueryClient } from "@rust-v1/react-query";
 import { METRICS_QUERY_KEY } from "./use-metrics";
 
 interface SearchProductsInput {

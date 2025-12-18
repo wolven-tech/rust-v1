@@ -38,22 +38,29 @@ export function UserAvatar({ email, name }: UserAvatarProps) {
           <p className="text-sm font-medium text-white">{displayName}</p>
           {email && <p className="text-xs text-slate-400">{email}</p>}
         </div>
-        <Icons.ChevronDown className={`size-4 text-slate-400 transition-transform ${isOpen ? "rotate-180" : ""}`} />
+        <Icons.ChevronDown
+          className={`size-4 text-slate-400 transition-transform ${isOpen ? "rotate-180" : ""}`}
+        />
       </button>
 
       {isOpen && (
         <>
           {/* Backdrop */}
           <div
+            role="button"
+            tabIndex={0}
             className="fixed inset-0 z-40"
             onClick={() => setIsOpen(false)}
+            onKeyDown={(e) => e.key === "Escape" && setIsOpen(false)}
           />
 
           {/* Dropdown */}
           <div className="absolute right-0 top-full mt-2 w-56 rounded-xl bg-slate-900 border border-white/10 shadow-xl z-50 overflow-hidden">
             <div className="p-3 border-b border-white/10">
               <p className="text-sm font-medium text-white">{displayName}</p>
-              {email && <p className="text-xs text-slate-400 truncate">{email}</p>}
+              {email && (
+                <p className="text-xs text-slate-400 truncate">{email}</p>
+              )}
             </div>
             <div className="p-2">
               <Button

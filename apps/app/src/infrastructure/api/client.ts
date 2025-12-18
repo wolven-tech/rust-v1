@@ -59,7 +59,9 @@ export const apiClient = {
   /**
    * Search for products by query
    */
-  searchProducts: (data: SearchProductsRequest): Promise<SearchProductsResponse> =>
+  searchProducts: (
+    data: SearchProductsRequest,
+  ): Promise<SearchProductsResponse> =>
     request("/api/products/search", {
       method: "POST",
       body: JSON.stringify(data),

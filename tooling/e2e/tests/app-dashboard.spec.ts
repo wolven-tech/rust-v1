@@ -19,7 +19,9 @@ test.describe("Dashboard - Product Search", () => {
     await page.goto(`${APP_URL}/en/dashboard`);
 
     // Check page has product search section
-    await expect(page.getByRole("heading", { name: /product search/i })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: /product search/i }),
+    ).toBeVisible();
 
     // Check for search input (using @rust-v1/ui Input component)
     await expect(page.getByPlaceholder(/search products/i)).toBeVisible();
@@ -65,13 +67,17 @@ test.describe("Dashboard - Shipping Calculator", () => {
     await page.goto(`${APP_URL}/en/dashboard`);
 
     // Check for shipping calculator section
-    await expect(page.getByRole("heading", { name: /shipping calculator/i })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: /shipping calculator/i }),
+    ).toBeVisible();
 
     // Check for weight input
     await expect(page.getByPlaceholder(/weight/i)).toBeVisible();
 
     // Check for calculate button
-    await expect(page.getByRole("button", { name: /calculate/i })).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: /calculate/i }),
+    ).toBeVisible();
   });
 
   test("Can calculate shipping cost", async ({ page }) => {
@@ -107,7 +113,9 @@ test.describe("Dashboard - User Profile", () => {
     await page.goto(`${APP_URL}/en/dashboard`);
 
     // Check for user profile section
-    await expect(page.getByRole("heading", { name: /user profile/i })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: /user profile/i }),
+    ).toBeVisible();
 
     // Should display user ID
     await expect(page.getByTestId("user-id")).toBeVisible();

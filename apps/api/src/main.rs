@@ -2,18 +2,18 @@
 //!
 //! HTTP server powered by AllFrame's router and hyper.
 
-use std::net::SocketAddr;
-use std::sync::Arc;
+use std::{net::SocketAddr, sync::Arc};
 
-use allframe::hyper;
-use allframe::hyper::body::Incoming;
-use allframe::hyper::server::conn::http1;
-use allframe::hyper::service::service_fn;
-use allframe::hyper::{Request, Response, StatusCode};
-use allframe::router::Router;
-use allframe::serde_json::{self, json};
-use allframe::tokio;
-use allframe::tokio::net::TcpListener;
+use allframe::{
+    hyper,
+    hyper::{
+        body::Incoming, server::conn::http1, service::service_fn, Request, Response, StatusCode,
+    },
+    router::Router,
+    serde_json::{self, json},
+    tokio,
+    tokio::net::TcpListener,
+};
 use anyhow::Result;
 use api::{create_router, route_to_handler, AppState, Config};
 use bytes::Bytes;
@@ -27,8 +27,14 @@ fn cors_response(status: StatusCode, body: String) -> Response<Full<Bytes>> {
         .status(status)
         .header("Content-Type", "application/json")
         .header("Access-Control-Allow-Origin", "*")
-        .header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-        .header("Access-Control-Allow-Headers", "Content-Type, Authorization")
+        .header(
+            "Access-Control-Allow-Methods",
+            "GET, POST, PUT, DELETE, OPTIONS",
+        )
+        .header(
+            "Access-Control-Allow-Headers",
+            "Content-Type, Authorization",
+        )
         .body(Full::new(Bytes::from(body)))
         .unwrap()
 }
@@ -49,8 +55,14 @@ async fn handle_request(
         return Ok(Response::builder()
             .status(StatusCode::NO_CONTENT)
             .header("Access-Control-Allow-Origin", "*")
-            .header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-            .header("Access-Control-Allow-Headers", "Content-Type, Authorization")
+            .header(
+                "Access-Control-Allow-Methods",
+                "GET, POST, PUT, DELETE, OPTIONS",
+            )
+            .header(
+                "Access-Control-Allow-Headers",
+                "Content-Type, Authorization",
+            )
             .header("Access-Control-Max-Age", "86400")
             .body(Full::new(Bytes::new()))
             .unwrap());
@@ -102,19 +114,24 @@ async fn handle_request(
             }
         }
         ("POST", "/api/orders") => {
-            let (product, quantity) = if let Ok(json) = serde_json::from_slice::<serde_json::Value>(&body_bytes) {
-                let product = json.get("product")
+            let (product, quantity) = if let Ok(json) =
+                serde_json::from_slice::<serde_json::Value>(&body_bytes)
+            {
+                let product = json
+                    .get("product")
                     .and_then(|v| v.as_str())
                     .unwrap_or("Widget")
                     .to_string();
-                let quantity = json.get("quantity")
-                    .and_then(|v| v.as_u64())
-                    .unwrap_or(1) as u32;
+                let quantity = json.get("quantity").and_then(|v| v.as_u64()).unwrap_or(1) as u32;
                 (product, quantity)
             } else {
                 ("Widget".to_string(), 1)
             };
-            match state.allframe_service().create_order(product, quantity).await {
+            match state
+                .allframe_service()
+                .create_order(product, quantity)
+                .await
+            {
                 Ok(response) => serde_json::to_string(&response).unwrap_or_else(|_| {
                     json!({"error": "Failed to serialize response"}).to_string()
                 }),
@@ -122,10 +139,9 @@ async fn handle_request(
             }
         }
         ("POST", "/api/shipping/calculate") => {
-            let weight = if let Ok(json) = serde_json::from_slice::<serde_json::Value>(&body_bytes) {
-                json.get("weight")
-                    .and_then(|v| v.as_f64())
-                    .unwrap_or(0.0)
+            let weight = if let Ok(json) = serde_json::from_slice::<serde_json::Value>(&body_bytes)
+            {
+                json.get("weight").and_then(|v| v.as_f64()).unwrap_or(0.0)
             } else {
                 0.0
             };
@@ -133,11 +149,17 @@ async fn handle_request(
                 Ok(response) => serde_json::to_string(&response).unwrap_or_else(|_| {
                     json!({"error": "Failed to serialize response"}).to_string()
                 }),
-                Err(e) => return Ok(cors_response(StatusCode::BAD_REQUEST, json!({"error": e.to_string()}).to_string())),
+                Err(e) => {
+                    return Ok(cors_response(
+                        StatusCode::BAD_REQUEST,
+                        json!({"error": e.to_string()}).to_string(),
+                    ))
+                }
             }
         }
         ("POST", "/api/users") => {
-            let user_id = if let Ok(json) = serde_json::from_slice::<serde_json::Value>(&body_bytes) {
+            let user_id = if let Ok(json) = serde_json::from_slice::<serde_json::Value>(&body_bytes)
+            {
                 json.get("user_id")
                     .and_then(|v| v.as_str())
                     .map(|s| s.to_string())
@@ -152,28 +174,33 @@ async fn handle_request(
             }
         }
         ("POST", "/api/subscribe") => {
-            let (email, user_group) = if let Ok(json) = serde_json::from_slice::<serde_json::Value>(&body_bytes) {
-                let email = json.get("email")
-                    .and_then(|v| v.as_str())
-                    .unwrap_or("test@example.com")
-                    .to_string();
-                let user_group = json.get("userGroup")
-                    .and_then(|v| v.as_str())
-                    .unwrap_or("default")
-                    .to_string();
-                (email, user_group)
-            } else {
-                ("test@example.com".to_string(), "default".to_string())
-            };
-            match state.subscription_service().subscribe(email, user_group).await {
-                Ok((success, message, id)) => {
-                    json!({
-                        "success": success,
-                        "message": message,
-                        "id": id
-                    })
-                    .to_string()
-                }
+            let (email, user_group) =
+                if let Ok(json) = serde_json::from_slice::<serde_json::Value>(&body_bytes) {
+                    let email = json
+                        .get("email")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("test@example.com")
+                        .to_string();
+                    let user_group = json
+                        .get("userGroup")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("default")
+                        .to_string();
+                    (email, user_group)
+                } else {
+                    ("test@example.com".to_string(), "default".to_string())
+                };
+            match state
+                .subscription_service()
+                .subscribe(email, user_group)
+                .await
+            {
+                Ok((success, message, id)) => json!({
+                    "success": success,
+                    "message": message,
+                    "id": id
+                })
+                .to_string(),
                 Err(_) => json!({"success": false, "error": "Failed to subscribe"}).to_string(),
             }
         }
@@ -189,15 +216,13 @@ async fn handle_request(
         _ => {
             // Fall back to router for other routes (GET requests, etc.)
             match route_to_handler(&method, &path) {
-                Some(handler_name) => {
-                    match router.execute(handler_name).await {
-                        Ok(body) => body,
-                        Err(e) => {
-                            tracing::error!("Handler error: {}", e);
-                            json!({"error": "Internal server error"}).to_string()
-                        }
+                Some(handler_name) => match router.execute(handler_name).await {
+                    Ok(body) => body,
+                    Err(e) => {
+                        tracing::error!("Handler error: {}", e);
+                        json!({"error": "Internal server error"}).to_string()
                     }
-                }
+                },
                 None => {
                     return Ok(cors_response(
                         StatusCode::NOT_FOUND,
@@ -250,8 +275,14 @@ async fn main() -> Result<()> {
     println!("   → Powered by AllFrame");
     println!("   → Local:   http://localhost:{}", local_addr.port());
     println!("   → Network: http://0.0.0.0:{}", local_addr.port());
-    println!("   → Health:  http://localhost:{}/health", local_addr.port());
-    println!("   → Docs:    http://localhost:{}/docs\n", local_addr.port());
+    println!(
+        "   → Health:  http://localhost:{}/health",
+        local_addr.port()
+    );
+    println!(
+        "   → Docs:    http://localhost:{}/docs\n",
+        local_addr.port()
+    );
 
     info!("V1 API server started on port {}", local_addr.port());
 
@@ -269,10 +300,7 @@ async fn main() -> Result<()> {
                 handle_request(router, state, req)
             });
 
-            if let Err(err) = http1::Builder::new()
-                .serve_connection(io, service)
-                .await
-            {
+            if let Err(err) = http1::Builder::new().serve_connection(io, service).await {
                 tracing::error!("Error serving connection: {:?}", err);
             }
         });

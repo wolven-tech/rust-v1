@@ -1,10 +1,13 @@
 {
   "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
+  "files": {
+    "ignore": ["node_modules", ".next", "packages/tsconfig", "**/dist/**"]
+  },
   "organizeImports": {
     "enabled": true
   },
   "linter": {
-    "ignore": ["node_modules", ".next", "packages/tsconfig"],
+    "ignore": [],
     "enabled": true,
     "rules": {
       "recommended": true,

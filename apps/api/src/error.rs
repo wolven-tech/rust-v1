@@ -2,8 +2,7 @@
 //!
 //! Defines error types for the API using AllFrame patterns.
 
-use allframe::reqwest;
-use allframe::serde_json;
+use allframe::{reqwest, serde_json};
 use thiserror::Error;
 
 #[derive(Debug, Error)]

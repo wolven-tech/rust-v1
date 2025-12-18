@@ -5,9 +5,11 @@
 
 use std::sync::Arc;
 
-use allframe::chrono;
-use allframe::router::{rest::RestAdapter, RouteMetadata, Router};
-use allframe::serde_json::{self, json};
+use allframe::{
+    chrono,
+    router::{rest::RestAdapter, RouteMetadata, Router},
+    serde_json::{self, json},
+};
 
 pub mod application;
 pub mod config;
@@ -39,7 +41,7 @@ pub fn create_router(state: Arc<AppState>) -> Router {
                     "version": {"type": "string"},
                     "docs": {"type": "string"}
                 }
-            }))
+            })),
     );
     router.add_route(
         RouteMetadata::new("/health", "GET", "rest")
@@ -51,7 +53,7 @@ pub fn create_router(state: Arc<AppState>) -> Router {
                     "timestamp": {"type": "string", "format": "date-time"},
                     "version": {"type": "string"}
                 }
-            }))
+            })),
     );
     router.add_route(
         RouteMetadata::new("/api/products/search", "POST", "rest")
@@ -78,7 +80,7 @@ pub fn create_router(state: Arc<AppState>) -> Router {
                         }
                     }
                 }
-            }))
+            })),
     );
     router.add_route(
         RouteMetadata::new("/api/orders", "POST", "rest")
@@ -116,7 +118,7 @@ pub fn create_router(state: Arc<AppState>) -> Router {
                     "weight": {"type": "number"},
                     "cost": {"type": "number"}
                 }
-            }))
+            })),
     );
     router.add_route(
         RouteMetadata::new("/api/users", "POST", "rest")
@@ -154,7 +156,7 @@ pub fn create_router(state: Arc<AppState>) -> Router {
                     "message": {"type": "string"},
                     "id": {"type": "string"}
                 }
-            }))
+            })),
     );
 
     // Root endpoint
@@ -182,7 +184,11 @@ pub fn create_router(state: Arc<AppState>) -> Router {
     router.register("search_products", move || {
         let state = products_state.clone();
         async move {
-            match state.allframe_service().search_products("search".to_string()).await {
+            match state
+                .allframe_service()
+                .search_products("search".to_string())
+                .await
+            {
                 Ok(response) => serde_json::to_string(&response).unwrap_or_else(|_| {
                     json!({"error": "Failed to serialize response"}).to_string()
                 }),
@@ -196,7 +202,11 @@ pub fn create_router(state: Arc<AppState>) -> Router {
     router.register("create_order", move || {
         let state = orders_state.clone();
         async move {
-            match state.allframe_service().create_order("Widget".to_string(), 1).await {
+            match state
+                .allframe_service()
+                .create_order("Widget".to_string(), 1)
+                .await
+            {
                 Ok(response) => serde_json::to_string(&response).unwrap_or_else(|_| {
                     json!({"error": "Failed to serialize response"}).to_string()
                 }),
@@ -243,14 +253,12 @@ pub fn create_router(state: Arc<AppState>) -> Router {
                 .subscribe("test@example.com".to_string(), "default".to_string())
                 .await
             {
-                Ok((success, message, id)) => {
-                    json!({
-                        "success": success,
-                        "message": message,
-                        "id": id
-                    })
-                    .to_string()
-                }
+                Ok((success, message, id)) => json!({
+                    "success": success,
+                    "message": message,
+                    "id": id
+                })
+                .to_string(),
                 Err(_) => json!({"success": false, "error": "Failed to subscribe"}).to_string(),
             }
         }

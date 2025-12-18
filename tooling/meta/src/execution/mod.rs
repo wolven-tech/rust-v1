@@ -44,10 +44,7 @@ pub async fn status(config: &Config, project: Option<String>, lines: usize) -> R
 
     // Show running processes
     println!("## Running Processes");
-    println!(
-        "{:<15} {:<10} {:<28} UPTIME",
-        "PROJECT", "PID", "STARTED"
-    );
+    println!("{:<15} {:<10} {:<28} UPTIME", "PROJECT", "PID", "STARTED");
     println!("{}", "-".repeat(70));
 
     for (name, proj) in &config.projects {

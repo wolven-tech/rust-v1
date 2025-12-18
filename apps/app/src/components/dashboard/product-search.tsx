@@ -82,7 +82,9 @@ export function ProductSearch() {
       {searched && (
         <div data-testid="search-results" className="space-y-2">
           {results.length === 0 ? (
-            <p className="text-slate-400 text-sm py-4 text-center">No products found</p>
+            <p className="text-slate-400 text-sm py-4 text-center">
+              No products found
+            </p>
           ) : (
             <div className="grid gap-2">
               {results.map((product) => (
@@ -93,7 +95,9 @@ export function ProductSearch() {
                 >
                   <div className="flex items-center justify-between">
                     <p className="font-medium text-white">{product.name}</p>
-                    <span className="text-xs text-slate-500 font-mono">#{product.id}</span>
+                    <span className="text-xs text-slate-500 font-mono">
+                      #{product.id}
+                    </span>
                   </div>
                   {product.description && (
                     <p className="text-sm text-slate-400 mt-1">
@@ -101,7 +105,9 @@ export function ProductSearch() {
                     </p>
                   )}
                   {product.price && (
-                    <p className="text-sm font-semibold text-purple-400 mt-2">${product.price}</p>
+                    <p className="text-sm font-semibold text-purple-400 mt-2">
+                      ${product.price}
+                    </p>
                   )}
                 </div>
               ))}

@@ -28,7 +28,10 @@ export default async function DashboardPage() {
               <span className="size-1.5 rounded-full bg-green-500 animate-pulse" />
               API Connected
             </div>
-            <UserAvatar email={user?.email} name={user?.user_metadata?.full_name} />
+            <UserAvatar
+              email={user?.email}
+              name={user?.user_metadata?.full_name}
+            />
           </div>
 
           {/* Header */}

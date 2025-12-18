@@ -102,8 +102,13 @@ export function UserProfile() {
         <div className="h-px bg-white/10" />
 
         <div>
-          <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">User ID</p>
-          <p data-testid="user-id" className="font-mono text-sm text-slate-300 bg-white/5 px-2 py-1 rounded inline-block">
+          <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">
+            User ID
+          </p>
+          <p
+            data-testid="user-id"
+            className="font-mono text-sm text-slate-300 bg-white/5 px-2 py-1 rounded inline-block"
+          >
             {user.id}
           </p>
         </div>

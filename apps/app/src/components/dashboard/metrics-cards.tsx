@@ -1,7 +1,7 @@
 "use client";
 
-import { Icons } from "@rust-v1/ui/icons";
 import { useMetrics } from "@/hooks/api";
+import { Icons } from "@rust-v1/ui/icons";
 
 interface MetricCardProps {
   title: string;
@@ -13,7 +13,15 @@ interface MetricCardProps {
   loading?: boolean;
 }
 
-function MetricCard({ title, value, subtitle, icon, trend, color, loading }: MetricCardProps) {
+function MetricCard({
+  title,
+  value,
+  subtitle,
+  icon,
+  trend,
+  color,
+  loading,
+}: MetricCardProps) {
   const colorClasses = {
     purple: "from-purple-500/20 to-purple-600/10 border-purple-500/20",
     blue: "from-blue-500/20 to-blue-600/10 border-blue-500/20",
@@ -29,7 +37,9 @@ function MetricCard({ title, value, subtitle, icon, trend, color, loading }: Met
   };
 
   return (
-    <div className={`p-5 rounded-2xl bg-gradient-to-br ${colorClasses[color]} border backdrop-blur-sm`}>
+    <div
+      className={`p-5 rounded-2xl bg-gradient-to-br ${colorClasses[color]} border backdrop-blur-sm`}
+    >
       <div className="flex items-start justify-between">
         <div className="space-y-1">
           <p className="text-sm text-slate-400">{title}</p>
@@ -46,8 +56,11 @@ function MetricCard({ title, value, subtitle, icon, trend, color, loading }: Met
       </div>
       {trend && (
         <div className="mt-3 pt-3 border-t border-white/5">
-          <span className={`text-xs ${trend.value >= 0 ? "text-green-400" : "text-red-400"}`}>
-            {trend.value >= 0 ? "+" : ""}{trend.value}%
+          <span
+            className={`text-xs ${trend.value >= 0 ? "text-green-400" : "text-red-400"}`}
+          >
+            {trend.value >= 0 ? "+" : ""}
+            {trend.value}%
           </span>
           <span className="text-xs text-slate-500 ml-1">{trend.label}</span>
         </div>

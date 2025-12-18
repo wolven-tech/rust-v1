@@ -1,7 +1,7 @@
 "use server";
 
-import { apiClient } from "@/infrastructure/api";
 import { actionClient } from "@/actions/safe-action";
+import { apiClient } from "@/infrastructure/api";
 import { z } from "zod";
 
 const searchProductsSchema = z.object({

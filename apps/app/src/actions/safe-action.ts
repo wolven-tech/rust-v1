@@ -1,9 +1,9 @@
-import * as Sentry from "@sentry/nextjs";
 import { setupAnalytics } from "@rust-v1/analytics/server";
 import { ratelimit } from "@rust-v1/kv/ratelimit";
 import { logger } from "@rust-v1/logger";
 import { getUser } from "@rust-v1/supabase/queries";
 import { createClient } from "@rust-v1/supabase/server";
+import * as Sentry from "@sentry/nextjs";
 import {
   DEFAULT_SERVER_ERROR_MESSAGE,
   createSafeActionClient,

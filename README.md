@@ -1,5 +1,15 @@
 # rust-v1 🚀
 
+[![CI](https://github.com/wolven-tech/rust-v1/actions/workflows/ci.yml/badge.svg)](https://github.com/wolven-tech/rust-v1/actions/workflows/ci.yml)
+[![Check](https://github.com/wolven-tech/rust-v1/actions/workflows/check.yml/badge.svg)](https://github.com/wolven-tech/rust-v1/actions/workflows/check.yml)
+[![Meta CI](https://github.com/wolven-tech/rust-v1/actions/workflows/meta-ci.yml/badge.svg)](https://github.com/wolven-tech/rust-v1/actions/workflows/meta-ci.yml)
+[![codecov](https://codecov.io/gh/wolven-tech/rust-v1/graph/badge.svg)](https://codecov.io/gh/wolven-tech/rust-v1)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Rust](https://img.shields.io/badge/Rust-1.70+-orange.svg)](https://www.rust-lang.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.5-blue.svg)](https://www.typescriptlang.org/)
+[![Next.js](https://img.shields.io/badge/Next.js-15-black.svg)](https://nextjs.org/)
+[![Bun](https://img.shields.io/badge/Bun-1.1.26+-pink.svg)](https://bun.sh/)
+
 > Modern full-stack monorepo template with Rust + Next.js, powered by the **meta orchestrator** with real-time log streaming
 
 **🚀 Quick Start:** `bunx degit wolven-tech/rust-v1 my-project`

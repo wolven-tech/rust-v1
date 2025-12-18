@@ -1,5 +1,4 @@
-use allframe::reqwest;
-use allframe::serde_json;
+use allframe::{reqwest, serde_json};
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use tracing::{info, instrument, warn};

@@ -45,7 +45,7 @@ test.describe("Full Stack Integration", () => {
         `${API_URL}/api/products/search`,
         {
           data: { query: "premium" },
-        }
+        },
       );
       expect(searchResponse.ok()).toBeTruthy();
 
@@ -66,7 +66,7 @@ test.describe("Full Stack Integration", () => {
         `${API_URL}/api/shipping/calculate`,
         {
           data: { weight: 10.0 },
-        }
+        },
       );
       expect(shippingResponse.ok()).toBeTruthy();
       const shippingData = await shippingResponse.json();
@@ -141,7 +141,9 @@ test.describe("Web App Integration", () => {
     await page.goto(WEB_URL);
 
     // Click Get updates
-    const getUpdatesButton = page.locator('header span:has-text("Get updates")');
+    const getUpdatesButton = page.locator(
+      'header span:has-text("Get updates")',
+    );
     await getUpdatesButton.click();
 
     // Check dialog appears with email input

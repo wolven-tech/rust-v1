@@ -26,7 +26,9 @@ test.describe("Web App - Homepage", () => {
     await page.goto(WEB_URL);
 
     // Check for Wolven Tech link in the main content (not header)
-    const wolvenLink = page.locator('p a[href="https://github.com/wolven-tech"]');
+    const wolvenLink = page.locator(
+      'p a[href="https://github.com/wolven-tech"]',
+    );
     await expect(wolvenLink).toBeVisible();
     await expect(wolvenLink).toContainText("Wolven Tech");
   });
@@ -54,14 +56,16 @@ test.describe("Web App - Header", () => {
     await expect(githubLink).toBeVisible();
     await expect(githubLink).toHaveAttribute(
       "href",
-      "https://github.com/wolven-tech"
+      "https://github.com/wolven-tech",
     );
   });
 
   test("Header has Get updates button", async ({ page }) => {
     await page.goto(WEB_URL);
 
-    const getUpdatesButton = page.locator('header span:has-text("Get updates")');
+    const getUpdatesButton = page.locator(
+      'header span:has-text("Get updates")',
+    );
     await expect(getUpdatesButton).toBeVisible();
   });
 
@@ -69,7 +73,9 @@ test.describe("Web App - Header", () => {
     await page.goto(WEB_URL);
 
     // Click the Get updates button
-    const getUpdatesButton = page.locator('header span:has-text("Get updates")');
+    const getUpdatesButton = page.locator(
+      'header span:has-text("Get updates")',
+    );
     await getUpdatesButton.click();
 
     // Check dialog appears
@@ -106,13 +112,13 @@ test.describe("Web App - Footer", () => {
 
     // Check for AllSource link
     const allsourceLink = page.locator(
-      'footer a[href="https://github.com/all-source-os"]'
+      'footer a[href="https://github.com/all-source-os"]',
     );
     await expect(allsourceLink).toBeVisible();
 
     // Check for Allframe link
     const allframeLink = page.locator(
-      'footer a[href="https://all-source-os.github.io/all-frame/"]'
+      'footer a[href="https://all-source-os.github.io/all-frame/"]',
     );
     await expect(allframeLink).toBeVisible();
   });
@@ -123,7 +129,9 @@ test.describe("Web App - Subscribe Form", () => {
     await page.goto(WEB_URL);
 
     // Open dialog
-    const getUpdatesButton = page.locator('header span:has-text("Get updates")');
+    const getUpdatesButton = page.locator(
+      'header span:has-text("Get updates")',
+    );
     await getUpdatesButton.click();
 
     const dialog = page.locator('[role="dialog"]');
@@ -141,7 +149,7 @@ test.describe("Web App - Subscribe Form", () => {
 
     // Browser HTML5 validation should prevent submission
     const validationMessage = await emailInput.evaluate(
-      (el: HTMLInputElement) => el.validationMessage
+      (el: HTMLInputElement) => el.validationMessage,
     );
     expect(validationMessage).toBeTruthy();
   });
@@ -150,7 +158,9 @@ test.describe("Web App - Subscribe Form", () => {
     await page.goto(WEB_URL);
 
     // Open dialog
-    const getUpdatesButton = page.locator('header span:has-text("Get updates")');
+    const getUpdatesButton = page.locator(
+      'header span:has-text("Get updates")',
+    );
     await getUpdatesButton.click();
 
     const dialog = page.locator('[role="dialog"]');

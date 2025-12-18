@@ -22,7 +22,7 @@ export default function Page() {
         style={{
           backgroundImage: `linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
                            linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px)`,
-          backgroundSize: '50px 50px'
+          backgroundSize: "50px 50px",
         }}
       />
 
@@ -57,9 +57,7 @@ export default function Page() {
         </div>
 
         {/* Footer */}
-        <p className="text-xs text-slate-500 mt-8">
-          Powered by Wolven Tech
-        </p>
+        <p className="text-xs text-slate-500 mt-8">Powered by Wolven Tech</p>
       </div>
     </div>
   );

@@ -1,4 +1,5 @@
 use std::sync::atomic::{AtomicU32, Ordering};
+
 use tracing::{info, instrument};
 use uuid::Uuid;
 
@@ -53,16 +54,46 @@ impl AllFrameService {
 
         // Mock product catalog
         let catalog = vec![
-            Product { id: "p1".to_string(), name: "Widget Pro".to_string() },
-            Product { id: "p2".to_string(), name: "Widget Basic".to_string() },
-            Product { id: "p3".to_string(), name: "Gadget X100".to_string() },
-            Product { id: "p4".to_string(), name: "Gadget Mini".to_string() },
-            Product { id: "p5".to_string(), name: "Smart Sensor".to_string() },
-            Product { id: "p6".to_string(), name: "Power Module".to_string() },
-            Product { id: "p7".to_string(), name: "Control Board".to_string() },
-            Product { id: "p8".to_string(), name: "Display Panel".to_string() },
-            Product { id: "p9".to_string(), name: "Cable Kit".to_string() },
-            Product { id: "p10".to_string(), name: "Battery Pack".to_string() },
+            Product {
+                id: "p1".to_string(),
+                name: "Widget Pro".to_string(),
+            },
+            Product {
+                id: "p2".to_string(),
+                name: "Widget Basic".to_string(),
+            },
+            Product {
+                id: "p3".to_string(),
+                name: "Gadget X100".to_string(),
+            },
+            Product {
+                id: "p4".to_string(),
+                name: "Gadget Mini".to_string(),
+            },
+            Product {
+                id: "p5".to_string(),
+                name: "Smart Sensor".to_string(),
+            },
+            Product {
+                id: "p6".to_string(),
+                name: "Power Module".to_string(),
+            },
+            Product {
+                id: "p7".to_string(),
+                name: "Control Board".to_string(),
+            },
+            Product {
+                id: "p8".to_string(),
+                name: "Display Panel".to_string(),
+            },
+            Product {
+                id: "p9".to_string(),
+                name: "Cable Kit".to_string(),
+            },
+            Product {
+                id: "p10".to_string(),
+                name: "Battery Pack".to_string(),
+            },
         ];
 
         // Filter products based on query (case-insensitive)

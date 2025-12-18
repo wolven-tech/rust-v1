@@ -1,7 +1,7 @@
 "use server";
 
-import { tasks } from "@trigger.dev/sdk";
 import type { helloWorldTask } from "@rust-v1/jobs/trigger/example";
+import { tasks } from "@trigger.dev/sdk";
 
 export async function myTask() {
   try {
