@@ -5,6 +5,71 @@ use tokio::process::Command;
 
 use crate::{adapters::ToolAdapter, config::Config};
 
+/// Generate unique session name from current directory
+fn get_session_name() -> String {
+    std::env::current_dir()
+        .ok()
+        .and_then(|p| p.file_name().map(|n| n.to_string_lossy().to_string()))
+        .map(|name| format!("meta-{}", sanitize_session_name(&name)))
+        .unwrap_or_else(|| "meta-dev".to_string())
+}
+
+fn sanitize_session_name(name: &str) -> String {
+    let sanitized: String = name
+        .chars()
+        .map(|c| {
+            if c.is_alphanumeric() || c == '-' {
+                c.to_ascii_lowercase()
+            } else {
+                '-'
+            }
+        })
+        .collect();
+    sanitized.trim_matches('-').to_string()
+}
+
+/// Pane information from tmux
+struct PaneInfo {
+    _index: usize,
+    title: String,
+    pid: u32,
+    _start_time: String,
+}
+
+/// Query tmux for pane information
+async fn get_tmux_panes(session_name: &str) -> Result<Vec<PaneInfo>> {
+    let output = Command::new("tmux")
+        .args([
+            "list-panes",
+            "-t",
+            session_name,
+            "-F",
+            "#{pane_index}|#{pane_title}|#{pane_pid}|#{pane_start_time}",
+        ])
+        .output()
+        .await?;
+
+    if !output.status.success() {
+        return Ok(vec![]);
+    }
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let mut panes = vec![];
+
+    for line in stdout.lines() {
+        let parts: Vec<&str> = line.split('|').collect();
+        if parts.len() >= 4 {
+            panes.push(PaneInfo {
+                _index: parts[0].parse().unwrap_or(0),
+                title: parts[1].to_string(),
+                pid: parts[2].parse().unwrap_or(0),
+                _start_time: parts[3].to_string(),
+            });
+        }
+    }
+    Ok(panes)
+}
+
 /// Show status of running dev processes
 ///
 /// # Output Format (designed for Claude Code parsing)
@@ -27,88 +92,73 @@ use crate::{adapters::ToolAdapter, config::Config};
 /// apps/api/target/debug/api: 2025-12-08T12:05:30 (rebuilt 1h 20m ago)
 /// ```
 pub async fn status(config: &Config, project: Option<String>, lines: usize) -> Result<()> {
+    let session_name = get_session_name();
+
     println!("=== META DEV STATUS ===");
+    println!("Session: {}", session_name);
     println!("Log file: .meta/logs/dev.log\n");
 
     // Check if tmux session exists
     let session_check = Command::new("tmux")
-        .args(["has-session", "-t", "meta-dev"])
+        .args(["has-session", "-t", &session_name])
         .output()
         .await;
 
     let session_active = session_check.map(|o| o.status.success()).unwrap_or(false);
 
     if !session_active {
-        println!("⚠️  No active meta-dev session. Run 'meta dev' to start.\n");
+        println!(
+            "⚠️  No active {} session. Run 'meta dev' to start.\n",
+            session_name
+        );
     }
+
+    // Get tmux panes for process detection
+    let panes = get_tmux_panes(&session_name).await.unwrap_or_default();
 
     // Show running processes
     println!("## Running Processes");
     println!("{:<15} {:<10} {:<28} UPTIME", "PROJECT", "PID", "STARTED");
     println!("{}", "-".repeat(70));
 
-    for (name, proj) in &config.projects {
+    for name in config.projects.keys() {
         if let Some(ref filter) = project {
             if name != filter {
                 continue;
             }
         }
 
-        // Find processes related to this project
-        // For Rust projects, try to get the actual binary name from Cargo.toml
-        let binary_name = if proj.project_type == "rust" {
-            get_rust_binary_name(&proj.path).unwrap_or_else(|| name.clone())
-        } else {
-            name.clone()
-        };
+        // Find the pane for this project by matching title
+        let pane = panes.iter().find(|p| &p.title == name);
 
-        let search_pattern = if proj.project_type == "rust" {
-            format!("target/debug/{}", binary_name)
-        } else {
-            proj.path.clone()
-        };
+        if let Some(pane) = pane {
+            // Get process info using pane PID
+            let pid = pane.pid;
+            let detail_output = Command::new("ps")
+                .args(["-p", &pid.to_string(), "-o", "pid,lstart,etime"])
+                .output()
+                .await;
 
-        let ps_output = Command::new("sh")
-            .args([
-                "-c",
-                &format!(
-                    "ps aux | grep -E '{}' | grep -v grep | head -1",
-                    search_pattern
-                ),
-            ])
-            .output()
-            .await;
-
-        if let Ok(output) = ps_output {
-            let stdout = String::from_utf8_lossy(&output.stdout);
-            if !stdout.trim().is_empty() {
-                // Parse ps output to get PID
-                let parts: Vec<&str> = stdout.split_whitespace().collect();
-                if parts.len() >= 2 {
-                    let pid = parts[1];
-
-                    // Get detailed process info
-                    let detail_output = Command::new("ps")
-                        .args(["-p", pid, "-o", "pid,lstart,etime"])
-                        .output()
-                        .await;
-
-                    if let Ok(detail) = detail_output {
-                        let detail_str = String::from_utf8_lossy(&detail.stdout);
-                        let lines_vec: Vec<&str> = detail_str.lines().collect();
-                        if lines_vec.len() >= 2 {
-                            let info_parts: Vec<&str> = lines_vec[1].split_whitespace().collect();
-                            if info_parts.len() >= 6 {
-                                let started = info_parts[1..6].join(" ");
-                                let uptime = info_parts.last().unwrap_or(&"?");
-                                println!("{:<15} {:<10} {:<28} {}", name, pid, started, uptime);
-                            }
-                        }
+            if let Ok(detail) = detail_output {
+                let detail_str = String::from_utf8_lossy(&detail.stdout);
+                let lines_vec: Vec<&str> = detail_str.lines().collect();
+                if lines_vec.len() >= 2 {
+                    let info_parts: Vec<&str> = lines_vec[1].split_whitespace().collect();
+                    if info_parts.len() >= 6 {
+                        let started = info_parts[1..6].join(" ");
+                        let uptime = info_parts.last().unwrap_or(&"?");
+                        println!("{:<15} {:<10} {:<28} {}", name, pid, started, uptime);
+                    } else {
+                        println!("{:<15} {:<10} {:<28} -", name, pid, "(running)");
                     }
+                } else {
+                    println!("{:<15} {:<10} {:<28} -", name, "-", "not running");
                 }
             } else {
                 println!("{:<15} {:<10} {:<28} -", name, "-", "not running");
             }
+        } else {
+            println!("{:<15} {:<10} {:<28} -", name, "-", "not running");
         }
     }
 
@@ -171,56 +221,36 @@ pub async fn status(config: &Config, project: Option<String>, lines: usize) -> R
                         .duration_since(binary_modified)
                         .unwrap_or_default();
 
-                    // Check if there's a running process and compare times
-                    let search_pattern = format!("target/debug/{}", binary_name);
-                    let ps_output = Command::new("sh")
-                        .args([
-                            "-c",
-                            &format!(
-                                "ps aux | grep -E '{}' | grep -v grep | head -1",
-                                search_pattern
-                            ),
-                        ])
-                        .output()
-                        .await;
-
                     let mut process_status = String::new();
 
-                    if let Ok(output) = ps_output {
-                        let stdout = String::from_utf8_lossy(&output.stdout);
-                        if !stdout.trim().is_empty() {
-                            let parts: Vec<&str> = stdout.split_whitespace().collect();
-                            if parts.len() >= 2 {
-                                let pid = parts[1];
-                                // Get elapsed time using ps -o etime (format: [[DD-]HH:]MM:SS)
-                                let etime_output = Command::new("ps")
-                                    .args(["-p", pid, "-o", "etime="])
-                                    .output()
-                                    .await;
+                    // Check if there's a running pane for this project
+                    if let Some(pane) = panes.iter().find(|p| p.title == *name) {
+                        let pid = pane.pid;
+                        // Get elapsed time using ps -o etime (format: [[DD-]HH:]MM:SS)
+                        let etime_output = Command::new("ps")
+                            .args(["-p", &pid.to_string(), "-o", "etime="])
+                            .output()
+                            .await;
 
-                                if let Ok(etime) = etime_output {
-                                    let etime_str =
-                                        String::from_utf8_lossy(&etime.stdout).trim().to_string();
-                                    if let Some(process_age_secs) = parse_etime(&etime_str) {
-                                        let binary_age_secs = binary_age.as_secs();
+                        if let Ok(etime) = etime_output {
+                            let etime_str =
+                                String::from_utf8_lossy(&etime.stdout).trim().to_string();
+                            if let Some(process_age_secs) = parse_etime(&etime_str) {
+                                let binary_age_secs = binary_age.as_secs();
 
-                                        // Only consider stale if binary is more than 60 seconds
-                                        // newer than process (to avoid false positives from timing)
-                                        let stale_threshold_secs = 60;
-                                        if binary_age_secs + stale_threshold_secs < process_age_secs
-                                        {
-                                            // Binary is significantly newer than process - STALE!
-                                            let diff_secs = process_age_secs - binary_age_secs;
-                                            let diff_mins = diff_secs / 60;
-                                            process_status = format!(
-                                                " ⚠️  STALE: binary rebuilt {}m after process \
-                                                 started",
-                                                diff_mins
-                                            );
-                                        } else {
-                                            process_status = " ✓ running latest binary".to_string();
-                                        }
-                                    }
+                                // Only consider stale if binary is more than 60 seconds
+                                // newer than process (to avoid false positives from timing)
+                                let stale_threshold_secs = 60;
+                                if binary_age_secs + stale_threshold_secs < process_age_secs {
+                                    // Binary is significantly newer than process - STALE!
+                                    let diff_secs = process_age_secs - binary_age_secs;
+                                    let diff_mins = diff_secs / 60;
+                                    process_status = format!(
+                                        " ⚠️  STALE: binary rebuilt {}m after process started",
+                                        diff_mins
+                                    );
+                                } else {
+                                    process_status = " ✓ running latest binary".to_string();
                                 }
                             }
                         }
@@ -242,7 +272,133 @@ pub async fn status(config: &Config, project: Option<String>, lines: usize) -> R
         }
     }
 
+    // Show available project logs
+    println!("\n## Project Logs");
+    println!(
+        "Use 'meta logs <project>' to view logs, or 'meta logs <project> --follow' to stream.\n"
+    );
+    for name in config.projects.keys() {
+        if let Some(ref filter) = project {
+            if name != filter {
+                continue;
+            }
+        }
+        let log_path = format!(".meta/logs/{}.log", name);
+        if std::path::Path::new(&log_path).exists() {
+            if let Ok(metadata) = std::fs::metadata(&log_path) {
+                let size_kb = metadata.len() / 1024;
+                println!("  {} → {} ({}KB)", name, log_path, size_kb);
+            }
+        } else {
+            println!("  {} → (no log file yet)", name);
+        }
+    }
+
     println!();
+    Ok(())
+}
+
+/// View logs for a specific project
+pub async fn logs(
+    config: &Config,
+    project: Option<String>,
+    follow: bool,
+    lines: usize,
+) -> Result<()> {
+    // If no project specified, list available logs
+    let Some(project) = project else {
+        return list_available_logs(config).await;
+    };
+
+    // Validate project exists in config
+    if !config.projects.contains_key(&project) {
+        let available: Vec<&String> = config.projects.keys().collect();
+        anyhow::bail!(
+            "Unknown project '{}'. Available projects: {}",
+            project,
+            available
+                .iter()
+                .map(|s| s.as_str())
+                .collect::<Vec<_>>()
+                .join(", ")
+        );
+    }
+
+    let log_path = format!(".meta/logs/{}.log", project);
+    let path = std::path::Path::new(&log_path);
+
+    if !path.exists() {
+        println!("No log file for '{}' yet.", project);
+        println!(
+            "\nLogs are created when you run 'meta dev'. The project must output to stdout/stderr."
+        );
+        return Ok(());
+    }
+
+    if follow {
+        // Use tail -f for live streaming
+        let status = Command::new("tail")
+            .args(["-f", "-n", &lines.to_string(), &log_path])
+            .stdin(std::process::Stdio::inherit())
+            .stdout(std::process::Stdio::inherit())
+            .stderr(std::process::Stdio::inherit())
+            .status()
+            .await?;
+
+        if !status.success() {
+            anyhow::bail!("Failed to tail log file");
+        }
+    } else {
+        // Use tail for efficient reading of last N lines (avoids loading entire file)
+        let output = Command::new("tail")
+            .args(["-n", &lines.to_string(), &log_path])
+            .output()
+            .await?;
+
+        if output.status.success() {
+            print!("{}", String::from_utf8_lossy(&output.stdout));
+        } else {
+            anyhow::bail!("Failed to read log file");
+        }
+    }
+
+    Ok(())
+}
+
+/// List available log files
+async fn list_available_logs(config: &Config) -> Result<()> {
+    println!("## Available Project Logs\n");
+
+    let mut has_logs = false;
+    for name in config.projects.keys() {
+        let log_path = format!(".meta/logs/{}.log", name);
+        if std::path::Path::new(&log_path).exists() {
+            if let Ok(metadata) = std::fs::metadata(&log_path) {
+                has_logs = true;
+                let size = metadata.len();
+                let size_str = if size >= 1024 * 1024 {
+                    format!("{:.1}MB", size as f64 / (1024.0 * 1024.0))
+                } else if size >= 1024 {
+                    format!("{}KB", size / 1024)
+                } else {
+                    format!("{}B", size)
+                };
+                println!("  {} ({}) → meta logs {}", name, size_str, name);
+            }
+        }
+    }
+
+    if !has_logs {
+        println!("  (no log files yet)\n");
+        println!("Logs are created when you run 'meta dev'.");
+        println!("Project stdout/stderr is captured to .meta/logs/<project>.log");
+    } else {
+        println!("\nUsage:");
+        println!("  meta logs <project>           View last 50 lines");
+        println!("  meta logs <project> -l 100    View last 100 lines");
+        println!("  meta logs <project> --follow  Stream logs in real-time");
+    }
+
     Ok(())
 }
 
@@ -312,15 +468,15 @@ fn parse_etime(s: &str) -> Option<u64> {
     Some(total_secs)
 }
 
-/// Stop all running meta-dev tmux sessions
+/// Stop all running meta tmux sessions for this workspace
 pub async fn dev_stop() -> Result<()> {
-    let session_name = "meta-dev";
+    let session_name = get_session_name();
 
     println!("🛑 Stopping meta development session...\n");
 
     // Check if session exists
     let list_output = Command::new("tmux")
-        .args(["has-session", "-t", session_name])
+        .args(["has-session", "-t", &session_name])
         .output()
         .await;
 
@@ -328,7 +484,7 @@ pub async fn dev_stop() -> Result<()> {
         Ok(output) if output.status.success() => {
             // Session exists, kill it
             let kill_result = Command::new("tmux")
-                .args(["kill-session", "-t", session_name])
+                .args(["kill-session", "-t", &session_name])
                 .output()
                 .await?;
 
@@ -341,7 +497,7 @@ pub async fn dev_stop() -> Result<()> {
             }
         }
         Ok(_) => {
-            println!("ℹ️  No active meta-dev session found.");
+            println!("ℹ️  No active {} session found.", session_name);
             println!("\n💡 Use 'meta dev' to start development servers.");
         }
         Err(e) => {
@@ -352,6 +508,49 @@ pub async fn dev_stop() -> Result<()> {
                 anyhow::bail!("Failed to check tmux session: {}", e);
             }
         }
+    }
+
+    Ok(())
+}
+
+/// List all active meta-* tmux sessions
+pub async fn sessions() -> Result<()> {
+    let output = Command::new("tmux")
+        .args([
+            "list-sessions",
+            "-F",
+            "#{session_name}|#{session_created}|#{session_windows}",
+        ])
+        .output()
+        .await?;
+
+    if !output.status.success() {
+        println!("No tmux sessions found.");
+        return Ok(());
+    }
+
+    let current_session = get_session_name();
+    let stdout = String::from_utf8_lossy(&output.stdout);
+
+    println!("## Active Meta Sessions\n");
+    let mut found = false;
+
+    for line in stdout.lines() {
+        let parts: Vec<&str> = line.split('|').collect();
+        if parts.len() >= 3 && parts[0].starts_with("meta-") {
+            found = true;
+            let marker = if parts[0] == current_session {
+                " (this workspace)"
+            } else {
+                ""
+            };
+            println!("  {}{}", parts[0], marker);
+            println!("    Panes: {}", parts[2]);
+        }
+    }
+
+    if !found {
+        println!("  (no active meta sessions)");
     }
 
     Ok(())
@@ -440,11 +639,11 @@ pub async fn dev(config: &Config, projects: Option<Vec<String>>) -> Result<()> {
 }
 
 async fn launch_tmux_session(commands: &[(String, String)]) -> Result<()> {
-    let session_name = "meta-dev";
+    let session_name = get_session_name();
 
     // Kill existing session if it exists
     let _ = Command::new("tmux")
-        .args(["kill-session", "-t", session_name])
+        .args(["kill-session", "-t", &session_name])
         .output()
         .await;
 
@@ -468,15 +667,26 @@ async fn launch_tmux_session(commands: &[(String, String)]) -> Result<()> {
     // (pid=12346)   [2025-12-08T12:05:32] [api] EXIT: Process exited with code
     // 0
     let wrap_command = |name: &str, cmd: &str| -> String {
-        let log_file = ".meta/logs/dev.log";
+        let dev_log = ".meta/logs/dev.log";
+        let project_log = format!(".meta/logs/{}.log", name);
         format!(
-            r#"LOG_FILE="{log_file}"; \
+            r#"DEV_LOG="{dev_log}"; \
+PROJECT_LOG="{project_log}"; \
 PROJECT="{name}"; \
-log_event() {{ echo "[$(date -u +%Y-%m-%dT%H:%M:%S)] [$PROJECT] $1" >> "$LOG_FILE"; }}; \
+log_event() {{ echo "[$(date -u +%Y-%m-%dT%H:%M:%S)] [$PROJECT] $1" >> "$DEV_LOG"; }}; \
+rotate_log() {{ \
+  if [ -f "$PROJECT_LOG" ]; then \
+    SIZE=$(stat -f%z "$PROJECT_LOG" 2>/dev/null || stat -c%s "$PROJECT_LOG" 2>/dev/null || echo 0); \
+    if [ "$SIZE" -gt 10485760 ]; then \
+      mv "$PROJECT_LOG" "$PROJECT_LOG.1"; \
+    fi; \
+  fi; \
+}}; \
 run_with_logging() {{ \
+  rotate_log; \
   log_event "START: Process started (pid=$$)"; \
-  {cmd}; \
-  EXIT_CODE=$?; \
+  {cmd} 2>&1 | tee -a "$PROJECT_LOG"; \
+  EXIT_CODE=${{PIPESTATUS[0]}}; \
   log_event "EXIT: Process exited with code $EXIT_CODE"; \
   return $EXIT_CODE; \
 }}; \
@@ -487,7 +697,8 @@ while true; do \
   log_event "RESTART: Manual restart triggered"; \
   run_with_logging; \
 done"#,
-            log_file = log_file,
+            dev_log = dev_log,
+            project_log = project_log,
             name = name,
             cmd = cmd
         )
@@ -497,7 +708,7 @@ done"#,
     let first_cmd = &commands[0];
     let wrapped_first = wrap_command(&first_cmd.0, &first_cmd.1);
     Command::new("tmux")
-        .args(["new-session", "-d", "-s", session_name, "-n", &first_cmd.0])
+        .args(["new-session", "-d", "-s", &session_name, "-n", &first_cmd.0])
         .arg(&wrapped_first)
         .output()
         .await?;
@@ -506,20 +717,20 @@ done"#,
     for (name, cmd) in commands.iter().skip(1) {
         let wrapped_cmd = wrap_command(name, cmd);
         Command::new("tmux")
-            .args(["split-window", "-t", session_name, "-h"])
+            .args(["split-window", "-t", &session_name, "-h"])
             .arg(&wrapped_cmd)
             .output()
             .await?;
 
         Command::new("tmux")
-            .args(["select-pane", "-t", session_name, "-T", name])
+            .args(["select-pane", "-t", &session_name, "-T", name])
             .output()
             .await?;
     }
 
     // Tile the panes evenly
     Command::new("tmux")
-        .args(["select-layout", "-t", session_name, "tiled"])
+        .args(["select-layout", "-t", &session_name, "tiled"])
         .output()
         .await?;
 
@@ -538,7 +749,7 @@ done"#,
     println!("╰─────────────────────────────────────────────────────────╯\n");
 
     let status = Command::new("tmux")
-        .args(["attach-session", "-t", session_name])
+        .args(["attach-session", "-t", &session_name])
         .stdin(std::process::Stdio::inherit())
         .stdout(std::process::Stdio::inherit())
         .stderr(std::process::Stdio::inherit())

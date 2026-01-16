@@ -59,5 +59,17 @@ async fn main() -> Result<()> {
             let config = Config::load()?;
             execution::status(&config, project, lines).await
         }
+        Commands::Logs {
+            project,
+            follow,
+            lines,
+        } => {
+            let config = Config::load()?;
+            execution::logs(&config, project, follow, lines).await
+        }
+        Commands::Sessions => {
+            info!("Listing active meta sessions...");
+            execution::sessions().await
+        }
     }
 }

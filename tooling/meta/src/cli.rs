@@ -69,4 +69,28 @@ pub enum Commands {
 
     /// Validate meta.toml configuration and check tool availability
     Doctor,
+
+    /// View project logs
+    ///
+    /// Shows stdout/stderr captured from dev processes.
+    /// Without a project name, lists available log files.
+    Logs {
+        /// Project name to view logs for (optional - lists available if
+        /// omitted)
+        project: Option<String>,
+
+        /// Follow log output (like tail -f)
+        #[arg(short, long)]
+        follow: bool,
+
+        /// Number of lines to show (default: 50)
+        #[arg(short, long, default_value = "50")]
+        lines: usize,
+    },
+
+    /// List all active meta tmux sessions
+    ///
+    /// Shows all meta-* tmux sessions across different workspaces.
+    /// Helpful for managing multiple development environments.
+    Sessions,
 }

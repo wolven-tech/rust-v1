@@ -1,198 +1,112 @@
 ---
-name: meta-monorepo
-description: Manage polyglot monorepo using the meta CLI. Use for development servers, builds, tests, process status, and orchestrating Turborepo/Cargo/Bacon across projects.
+name: meta
+description: Manage polyglot monorepo dev servers, builds, and tests via meta CLI
 ---
 
-# Meta CLI - Polyglot Monorepo Orchestrator
+# Meta CLI Skill
 
-Meta is a unified CLI for managing polyglot monorepos. It orchestrates Turborepo (TypeScript), Cargo (Rust), and Bacon (Rust hot-reload) in tmux sessions.
+## Quick Command Selection
 
-## Quick Reference
+| Goal | Command |
+|------|---------|
+| Check what's running | `meta status` |
+| Start dev servers | `meta dev` |
+| Stop dev servers | `meta dev:stop` |
+| View project logs | `meta logs <project>` |
+| Stream logs live | `meta logs <project> --follow` |
+| List all sessions | `meta sessions` |
+| Validate setup | `meta doctor` |
+| Run task (fmt/clippy/test) | `meta run <task>` |
 
-```bash
-# Check what's running and detect stale processes
-meta status
+## Decision Tree
 
-# Start all dev servers in tmux
-meta dev
-
-# Start specific project only
-meta dev --projects api
-
-# Stop all dev servers
-meta dev:stop
-
-# Run tasks across projects
-meta run fmt        # Format all
-meta run clippy     # Lint Rust
-meta run check      # Type check
-
-# Build and test
-meta build
-meta test
-
-# Validate setup
-meta doctor
+```
+I need to...
+├─ Check process status → meta status
+├─ Start development
+│   ├─ All projects → meta dev
+│   └─ Specific project → meta dev --projects <name>
+├─ Stop development → meta dev:stop
+├─ View logs
+│   ├─ Recent output → meta logs <project>
+│   ├─ Live stream → meta logs <project> --follow
+│   └─ List available → meta logs
+├─ Debug issues
+│   ├─ Process not running? → meta status, then meta logs <project>
+│   ├─ Stale binary? → meta status shows STALE
+│   └─ Config problem? → meta doctor
+└─ Run quality checks → meta run fmt|clippy|test
 ```
 
-## Understanding `meta status`
+## Output Parsing
 
-The status command is designed to help detect stale processes:
-
+### meta status
 ```
 === META DEV STATUS ===
+Session: meta-<workspace>
 Log file: .meta/logs/dev.log
 
 ## Running Processes
 PROJECT         PID        STARTED                      UPTIME
-----------------------------------------------------------------------
-api             12345      Mon Dec  8 12:02:18 2025     02:30:00
-web             -          not running                  -
+<name>          <pid>      <datetime>                   <duration>
+<name>          -          not running                  -
 
-## Recent Events (last 20)
-[2025-12-08T12:02:18] [api] START: Process started (pid=12345)
-[2025-12-08T12:05:32] [api] RESTART: Manual restart triggered
-
-## Binary Status (Rust projects)
-apps/api/target/debug/api: rebuilt 5m ago ✓ running latest binary
+## Project Logs
+  <name> → .meta/logs/<name>.log (<size>)
 ```
 
-### Stale Process Detection
+**Extract:**
+- Process running: PID is numeric (not "-")
+- Process stale: Line contains "STALE"
+- Uptime: Last column when running
 
-If you see:
-```
-apps/api/target/debug/api: rebuilt 2m ago ⚠️  STALE: binary rebuilt 10m after process started
-```
+### meta logs
+Raw stdout/stderr from project. Parse for:
+- Error patterns: `error:`, `Error:`, `panic`, `FAILED`
+- Startup: `Listening on`, `Server started`, `Ready`
 
-This means the binary was recompiled but the running process is still the old version. **Restart needed!**
+## Error Handling
 
-## Development Workflow
+| Exit Code | Meaning | Recovery |
+|-----------|---------|----------|
+| 0 | Success | - |
+| 1 | Config error | Run `meta doctor` |
+| 101 | Runtime error | Check `meta status`, `meta logs` |
 
-### Starting Development
+## Common Workflows
 
+### Start fresh development
 ```bash
-meta dev              # Launches tmux with all projects
+meta doctor          # Validate config
+meta dev             # Start all servers
+# Ctrl+B D to detach
 ```
 
-This creates a `meta-dev` tmux session with panes for each project:
-- Rust projects use `bacon run-long` (auto-restart on changes)
-- TypeScript projects use Turborepo
-
-### Tmux Navigation
-
-Once in the tmux session:
-- `Ctrl+B` then arrow keys - Navigate between panes
-- `Ctrl+B` then `Z` - Zoom current pane (toggle fullscreen)
-- `Ctrl+B` then `D` - Detach (keeps running in background)
-- `Ctrl+B` then `Q` - Show pane numbers
-
-### Checking Status
-
+### Debug crashed process
 ```bash
-meta status                 # Full status
-meta status -p api          # Filter to specific project
-meta status -l 50           # Show more log entries
+meta status          # Check what's running
+meta logs api -l 100 # View recent logs
+meta dev:stop        # Stop all
+meta dev             # Restart
 ```
 
-### Stopping Development
-
+### Check for stale processes
 ```bash
-meta dev:stop               # Kills the meta-dev tmux session
+meta status
+# Look for: STALE: binary rebuilt Xm after process started
+# If found: meta dev:stop && meta dev
 ```
 
-## Configuration
-
-Meta reads from `meta.toml` in the workspace root:
-
-```toml
-[workspace]
-name = "My Monorepo"
-root = "."
-
-[tools.turborepo]
-enabled = true
-command = "turbo"
-for_languages = ["typescript", "javascript"]
-
-[tools.bacon]
-enabled = true
-command = "bacon"
-for_languages = ["rust"]
-
-[tools.cargo]
-enabled = true
-command = "cargo"
-for_languages = ["rust"]
-
-[projects.api]
-type = "rust"
-path = "apps/api"
-
-[projects.api.tasks]
-dev = { tool = "bacon", command = "run-long" }
-build = { tool = "cargo", command = "build --release" }
-test = { tool = "cargo", command = "test" }
-```
-
-## Bacon Integration
-
-For Rust projects, bacon handles hot-reload with `kill_then_restart` strategy:
-
-```toml
-# apps/api/bacon.toml
-[jobs.run-long]
-command = ["cargo", "run", "--color", "always"]
-on_change_strategy = "kill_then_restart"
-watch = ["src", "Cargo.toml", ".env"]
-```
-
-When files change:
-1. Bacon kills the running cargo process
-2. Rebuilds the binary
-3. Restarts automatically
-
-**Important**: Use `bacon run-long` (not just `bacon`) to get auto-restart. Running `bacon check` only rebuilds but doesn't restart.
-
-## Log Files
-
-- `.meta/logs/dev.log` - Process start/stop/restart events
-- Log format: `[TIMESTAMP] [PROJECT] EVENT: message`
-
-## Troubleshooting
-
-### Process not restarting on changes
-
-1. Check you're using `bacon run-long` not `bacon check`
-2. Verify `on_change_strategy = "kill_then_restart"` in bacon.toml
-3. Run `meta status` to see if process is stale
-
-### Binary rebuilt but process is stale
-
+### Manage multiple workspaces
 ```bash
-meta status   # Check for ⚠️  STALE warning
-meta dev:stop # Stop everything
-meta dev      # Restart fresh
+meta sessions        # List all active meta sessions
+# Output shows which workspace each session belongs to
 ```
 
-### tmux session issues
+## Files
 
-```bash
-tmux kill-session -t meta-dev   # Force kill
-meta dev                        # Start fresh
-```
-
-## Project Types
-
-| Type | Dev Tool | Build Tool |
-|------|----------|------------|
-| `rust` | bacon | cargo |
-| `next` | turborepo | turborepo |
-| `typescript` | turborepo | turborepo |
-
-## Best Practices
-
-1. **Always check status first**: `meta status` before assuming something is running
-2. **Use stale detection**: The ⚠️ STALE warning means restart is needed
-3. **Let bacon handle restarts**: Don't manually restart Rust servers during dev
-4. **Detach, don't stop**: Use `Ctrl+B D` to detach and keep servers running
-5. **Check logs**: `.meta/logs/dev.log` shows restart history
+| File | Purpose |
+|------|---------|
+| `meta.toml` | Project configuration |
+| `.meta/logs/dev.log` | Lifecycle events |
+| `.meta/logs/<project>.log` | Project stdout/stderr |

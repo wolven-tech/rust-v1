@@ -36,6 +36,69 @@ Modern monorepos use **multiple specialized tools**:
 - ✅ **Stop All Sessions** - `meta dev:stop` kills all dev processes instantly
 - ✅ **Hot Reload Built-in** - Bacon and Turbo handle file watching natively
 - ✅ **Custom Pane Titles** - Each tmux pane shows project name
+- ✅ **Per-Project Logging** - Captures stdout/stderr to `.meta/logs/<project>.log`
+- ✅ **Log Viewing** - `meta logs` command with follow mode and line limits
+- ✅ **Multi-Instance Support** - Run meta in multiple workspaces simultaneously
+- ✅ **Session Management** - `meta sessions` lists all active meta sessions
+- ✅ **Claude Code Integration** - AI-optimized skill with decision trees and output parsing
+
+## Claude Code Integration
+
+Meta includes a purpose-built **Claude Code skill** (`.claude/skills/meta/SKILL.md`) that enables AI agents to effectively manage your development environment.
+
+### AI Skill Features
+
+| Feature | Description |
+|---------|-------------|
+| **Decision Tree** | Guides AI to select the correct command for any task |
+| **Output Parsing** | Structured patterns for extracting process status, errors, PIDs |
+| **Error Taxonomy** | Exit codes mapped to recovery actions |
+| **Workflow Templates** | Common multi-step operations (debug, restart, validate) |
+
+### Example: AI Debugging a Crashed Process
+
+When you tell Claude Code "the API server crashed", the skill guides it through:
+
+```bash
+# 1. Check what's running
+meta status
+# AI parses: PROJECT=api, PID=-, STATUS="not running"
+
+# 2. View recent logs for errors
+meta logs api -l 100
+# AI parses for: error:, panic, FAILED patterns
+
+# 3. Restart the environment
+meta dev:stop && meta dev
+```
+
+### Example: AI Managing Multiple Workspaces
+
+```bash
+# List all active sessions across workspaces
+meta sessions
+
+# Output (AI-parseable):
+## Active Meta Sessions
+
+  meta-backend (this workspace)
+    Panes: 3
+  meta-frontend
+    Panes: 2
+```
+
+### Invoking the Skill
+
+In Claude Code, use the `/meta` command or ask naturally:
+
+```
+> /meta status
+> "Check if my dev servers are running"
+> "Why isn't the API responding?"
+> "Start the development environment"
+```
+
+The skill file location: `.claude/skills/meta/SKILL.md`
 
 ## Installation
 
@@ -105,12 +168,13 @@ meta run test -p api
 Meta uses **tmux** to run multiple bacon and turbo instances concurrently:
 
 1. **Detects tmux** - Automatically checks if tmux is installed
-2. **Creates session** - Launches `meta-dev` tmux session
+2. **Creates session** - Launches `meta-<workspace>` tmux session (unique per directory)
 3. **Separate panes** - Each project gets its own pane:
    - Bacon projects: `cd apps/api && bacon run-long`
    - Turbo projects: `turbo run dev --filter=@package/name`
 4. **Full TUI** - Each bacon instance runs with complete interactivity
 5. **Easy navigation** - Use tmux keys to switch between panes
+6. **Multi-instance** - Run different workspaces without conflicts (`meta sessions` to list)
 
 ### Tool Routing
 
@@ -245,6 +309,69 @@ meta run fmt-fix
 - `audit` - Security vulnerability audit
 - `check` - Fast compile check without building
 
+### `meta status`
+Show status of running dev processes and available logs.
+
+**Options:**
+- `-p, --project <NAME>` - Show only entries for specific project
+- `-l, --lines <N>` - Number of recent log entries (default: 20)
+
+**Example:**
+```bash
+meta status
+
+# Output shows:
+# ✓ Running processes with PIDs and uptime
+# ✓ Recent lifecycle events (START/EXIT/RESTART)
+# ✓ Binary rebuild status (detects stale processes)
+# ✓ Available project logs with sizes
+```
+
+### `meta logs`
+View project logs (stdout/stderr captured from dev processes).
+
+**Options:**
+- `-f, --follow` - Follow log output in real-time (like `tail -f`)
+- `-l, --lines <N>` - Number of lines to show (default: 50)
+
+**Examples:**
+```bash
+# List available logs
+meta logs
+
+# View last 50 lines of api logs
+meta logs api
+
+# Follow api logs in real-time
+meta logs api --follow
+
+# View last 100 lines
+meta logs api -l 100
+```
+
+**Log files:**
+- Located in `.meta/logs/<project>.log`
+- Auto-rotated at 10MB (keeps one backup as `.log.1`)
+- Created when running `meta dev`
+
+### `meta sessions`
+List all active meta tmux sessions across different workspaces.
+
+**Example:**
+```bash
+meta sessions
+
+# Output shows:
+# ## Active Meta Sessions
+#
+#   meta-workspace-a (this workspace)
+#     Panes: 3
+#   meta-workspace-b
+#     Panes: 2
+```
+
+This is helpful when running meta in multiple workspaces simultaneously. Each workspace gets its own uniquely named session based on the directory name.
+
 ### `meta doctor`
 Validate your entire setup before starting development.
 
@@ -335,12 +462,29 @@ meta/
 - [x] Clean documentation (no bun wrappers, direct meta commands)
 - [x] Published to crates.io (`cargo install monorepo-meta`)
 
-### v0.3.1 (Current) ✅
+### v0.3.1 ✅
 - [x] `meta dev:stop` command to stop all tmux development sessions
 - [x] Shared Rust config files at workspace root (rustfmt.toml, .clippy.toml, cargo-sort.toml)
 - [x] Improved tmux navigation guide with keyboard shortcuts
 
-### v0.4.0 (Next)
+### v0.4.1 ✅
+- [x] `meta status` command for process monitoring
+- [x] Lifecycle logging to `.meta/logs/dev.log` (START/EXIT/RESTART events)
+- [x] Binary staleness detection (warns if binary rebuilt but process not restarted)
+
+### v0.5.0 ✅
+- [x] Per-project log capture (stdout/stderr to `.meta/logs/<project>.log`)
+- [x] `meta logs` command with `--follow` and `--lines` options
+- [x] Log rotation (10MB threshold, single backup)
+- [x] Project validation in logs command with helpful suggestions
+
+### v0.6.0 (Current) ✅
+- [x] **Claude Code Skill Redesign** - AI-optimized skill with decision trees, output parsing schemas, error taxonomy, and workflow templates
+- [x] Multi-instance support (directory-based session names like `meta-<workspace>`)
+- [x] Fixed process detection using tmux pane queries instead of unreliable `ps aux` parsing
+- [x] `meta sessions` command to list all active meta sessions across workspaces
+
+### v0.7.0 (Next)
 - [ ] Session management (save/restore pane layouts)
 - [ ] Multiple environment support (dev, staging, prod)
 - [ ] Project dependency awareness (start in order)

@@ -12,6 +12,9 @@ See Meta in action:
 
 - [Getting Started](#getting-started)
 - [Daily Workflow](#daily-workflow)
+- [Viewing Logs](#viewing-logs)
+- [Multi-Workspace Support](#multi-workspace-support)
+- [Claude Code Integration](#claude-code-integration)
 - [Tmux Navigation](#tmux-navigation)
 - [Recording Demos](#recording-demos)
 - [Configuration](#configuration)
@@ -111,12 +114,16 @@ Navigate to a bacon pane and use these shortcuts normally!
 
 **Reattach later:**
 ```bash
-tmux attach -t meta-dev
+# Session name is based on your directory (e.g., meta-myproject)
+tmux attach -t meta-<workspace>
+
+# Or list all meta sessions first
+meta sessions
 ```
 
 **Kill the session** (stops everything):
 ```bash
-tmux kill-session -t meta-dev
+meta dev:stop
 ```
 
 ### Ending Your Day
@@ -125,12 +132,185 @@ tmux kill-session -t meta-dev
 ```
 Press: Ctrl+B then D
 ```
-Processes keep running. Reattach tomorrow with `tmux attach -t meta-dev`.
+Processes keep running. Reattach tomorrow with `meta sessions` to find your session, then `tmux attach -t <session-name>`.
 
 **Option 2: Stop everything**
-Navigate to each pane and press `Ctrl+C`, or:
 ```bash
-tmux kill-session -t meta-dev
+meta dev:stop
+```
+
+## Viewing Logs
+
+Meta captures stdout/stderr from all dev processes to log files for later viewing.
+
+### Log File Locations
+
+```
+.meta/
+  logs/
+    dev.log        # Lifecycle events (START/EXIT/RESTART)
+    api.log        # API project stdout/stderr
+    web.log        # Web project stdout/stderr
+    api.log.1      # Previous rotation (if rotated)
+```
+
+### Listing Available Logs
+
+```bash
+meta logs
+```
+
+Shows all available log files with sizes and usage hints.
+
+### Viewing Project Logs
+
+```bash
+# View last 50 lines (default)
+meta logs api
+
+# View last 100 lines
+meta logs api -l 100
+
+# Follow in real-time (like tail -f)
+meta logs api --follow
+```
+
+### Checking Process Status
+
+```bash
+meta status
+```
+
+Shows:
+- Running processes with PIDs and uptime
+- Recent lifecycle events
+- Binary rebuild status (detects if you need to restart)
+- Available log files with sizes
+
+### Log Rotation
+
+Logs are automatically rotated when they exceed 10MB:
+- Current log: `.meta/logs/<project>.log`
+- Previous backup: `.meta/logs/<project>.log.1`
+
+Only one backup is kept to conserve disk space.
+
+### Troubleshooting with Logs
+
+**Process keeps crashing:**
+```bash
+meta logs api -l 200  # Check last 200 lines for errors
+```
+
+**Watch for errors in real-time:**
+```bash
+meta logs api --follow
+```
+
+**Check when processes started/stopped:**
+```bash
+meta status -l 50  # Show last 50 lifecycle events
+```
+
+## Multi-Workspace Support
+
+Meta v0.6.0 supports running in multiple workspaces simultaneously without conflicts.
+
+### How It Works
+
+Each workspace gets a unique tmux session name based on its directory:
+- Working in `/projects/backend` → session: `meta-backend`
+- Working in `/projects/frontend` → session: `meta-frontend`
+
+### Listing All Sessions
+
+```bash
+meta sessions
+```
+
+Output:
+```
+## Active Meta Sessions
+
+  meta-backend (this workspace)
+    Panes: 3
+  meta-frontend
+    Panes: 2
+```
+
+### Switching Between Workspaces
+
+```bash
+# Detach from current session
+# Press: Ctrl+B then D
+
+# List all sessions
+meta sessions
+
+# Attach to a different workspace
+tmux attach -t meta-frontend
+```
+
+### Stopping a Specific Workspace
+
+```bash
+# Stop current workspace
+meta dev:stop
+
+# Or stop any workspace by name
+tmux kill-session -t meta-backend
+```
+
+## Claude Code Integration
+
+Meta includes a purpose-built skill for Claude Code AI agents, enabling natural language control of your development environment.
+
+### Skill Location
+
+```
+.claude/skills/meta/SKILL.md
+```
+
+### What the AI Can Do
+
+| Task | Natural Language | Command |
+|------|------------------|---------|
+| Check status | "What's running?" | `meta status` |
+| Start dev | "Start the dev servers" | `meta dev` |
+| Stop dev | "Stop everything" | `meta dev:stop` |
+| Debug | "Why is the API down?" | `meta status` + `meta logs api` |
+| List sessions | "What workspaces are active?" | `meta sessions` |
+
+### Example: Debugging with Claude Code
+
+You can ask Claude Code:
+
+```
+> "The API server seems to have crashed"
+```
+
+The AI skill guides Claude to:
+1. Run `meta status` to check process state
+2. Parse output to identify that `api` shows `PID=-` (not running)
+3. Run `meta logs api -l 100` to find error messages
+4. Suggest `meta dev:stop && meta dev` to restart
+
+### AI-Optimized Features
+
+The skill includes:
+
+- **Decision Tree**: Maps user intents to correct commands
+- **Output Parsing**: Structured patterns for extracting PIDs, errors, status
+- **Error Taxonomy**: Exit codes with recovery actions
+- **Workflow Templates**: Multi-step operations for common tasks
+
+### Invoking the Skill
+
+In Claude Code:
+```
+> /meta
+> /meta status
+> "Check if my servers are running"
 ```
 
 ## Tmux Navigation
@@ -377,15 +557,18 @@ meta doctor  # Verify installation
 
 ### Session Already Exists
 
-**Error:** `duplicate session: meta-dev`
+**Error:** `duplicate session: meta-<workspace>`
 
 **Solution:**
 ```bash
-# Either attach to existing
-tmux attach -t meta-dev
+# List existing sessions
+meta sessions
 
-# Or kill and restart
-tmux kill-session -t meta-dev
+# Either attach to existing
+tmux attach -t meta-<workspace>
+
+# Or stop and restart
+meta dev:stop
 meta dev
 ```
 
