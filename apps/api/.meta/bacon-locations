@@ -1,2 +1,0 @@
-error|/Users/decebaldobrica/Projects/open-source/rust-v1/apps/api/src/main.rs:182:44|no method named `get_metrics` found for reference `&AllFrameService` in the current scope
-warning|/Users/decebaldobrica/Projects/open-source/rust-v1/apps/api/src/application/services/allframe_service.rs:7:9|unused import: `metrics::MetricsResponse`

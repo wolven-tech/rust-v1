@@ -19,14 +19,16 @@ need_stdout = true
 watch = ["src", "tests", "Cargo.toml"]
 
 [jobs.run]
-command = ["cargo", "run", "--color", "always"]
+# Use shell wrapper to tee output to log file while preserving bacon TUI
+command = ["sh", "-c", "mkdir -p ../../.meta/logs && cargo run --color always 2>&1 | tee ../../.meta/logs/api.log"]
 need_stdout = true
 allow_warnings = true
 watch = ["src", "Cargo.toml", ".env"]
 on_change_strategy = "wait_then_restart"
 
 [jobs.run-long]
-command = ["cargo", "run", "--color", "always"]
+# Use shell wrapper to tee output to log file while preserving bacon TUI
+command = ["sh", "-c", "mkdir -p ../../.meta/logs && cargo run --color always 2>&1 | tee ../../.meta/logs/api.log"]
 need_stdout = true
 background = false
 allow_warnings = true
@@ -50,11 +52,11 @@ command = ["cargo", "doc", "--color", "always", "--no-deps", "--open"]
 need_stdout = false
 watch = ["src", "Cargo.toml"]
 
-# Exports for meta integration
+# Exports for meta integration - centralized in workspace .meta/logs
 [exports.meta-locations]
 # Export locations in structured format for meta to consume
 auto = true
-path = ".meta/bacon-locations"
+path = "../../.meta/logs/api-locations"
 line_format = "{kind}|{path}:{line}:{column}|{message}"
 
 [keybindings]

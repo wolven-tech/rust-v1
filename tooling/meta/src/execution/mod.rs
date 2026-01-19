@@ -669,6 +669,17 @@ async fn launch_tmux_session(commands: &[(String, String)]) -> Result<()> {
     let wrap_command = |name: &str, cmd: &str| -> String {
         let dev_log = ".meta/logs/dev.log";
         let project_log = format!(".meta/logs/{}.log", name);
+        // Bacon handles its own logging via tee in bacon.toml, so skip the outer tee
+        // to avoid capturing TUI escape codes. Other tools (turbo, cargo) use the tee
+        // wrapper.
+        let is_bacon = cmd.contains("bacon");
+        let run_cmd = if is_bacon {
+            // Bacon handles logging internally - just run the command
+            format!("{cmd}; EXIT_CODE=$?")
+        } else {
+            // Other tools: capture stdout/stderr to project log via tee
+            format!("{cmd} 2>&1 | tee -a \"$PROJECT_LOG\"; EXIT_CODE=${{PIPESTATUS[0]}}")
+        };
         format!(
             r#"DEV_LOG="{dev_log}"; \
 PROJECT_LOG="{project_log}"; \
@@ -685,8 +696,7 @@ rotate_log() {{ \
 run_with_logging() {{ \
   rotate_log; \
   log_event "START: Process started (pid=$$)"; \
-  {cmd} 2>&1 | tee -a "$PROJECT_LOG"; \
-  EXIT_CODE=${{PIPESTATUS[0]}}; \
+  {run_cmd}; \
   log_event "EXIT: Process exited with code $EXIT_CODE"; \
   return $EXIT_CODE; \
 }}; \
@@ -700,7 +710,7 @@ done"#,
             dev_log = dev_log,
             project_log = project_log,
             name = name,
-            cmd = cmd
+            run_cmd = run_cmd
         )
     };
 
