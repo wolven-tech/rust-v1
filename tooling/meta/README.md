@@ -33,7 +33,11 @@ meta dev
 
 - **Tmux Orchestration** - Each project in its own pane with full TUI
 - **Smart Routing** - Turborepo from root, Bacon/Cargo from project directory
-- **Per-Project Logging** - Stdout captured to `.meta/logs/<project>.log`
+- **Per-Project Logging** - Stdout captured to `.meta/logs/<project>.log` (ANSI-stripped for readability)
+- **Project Exclusion** - `dev_default = false` to exclude projects from default `meta dev`
+- **Workspace-Aware** - Detects Cargo workspaces for correct binary paths
+- **Bacon Validation** - `meta doctor` warns about missing `bacon.toml`
+- **Process Tree Detection** - Detects running bacon/cargo processes even when shell wrappers exit
 - **Multi-Workspace** - Run meta in multiple directories without conflicts
 - **Claude Code Integration** - AI skill for natural language control
 - **Zero Config** - Auto-detects projects, generates `meta.toml`
@@ -87,24 +91,32 @@ path = "apps/web"
 
 [projects.web.tasks]
 dev = { tool = "turborepo", command = "run dev --filter=@org/web" }
+
+# Exclude from default `meta dev` but still usable with `meta dev -p mobile`
+[projects.mobile]
+type = "rust"
+path = "apps/mobile"
+dev_default = false
+
+[projects.mobile.tasks]
+dev = { tool = "cargo", command = "tauri android dev" }
 ```
 
-## Bacon Logging
+### `dev_default`
 
-For bacon projects to write logs, configure your `bacon.toml` to tee output:
+Set `dev_default = false` on a project to exclude it from `meta dev` while keeping it available via `meta dev -p <name>`. Useful for projects that require special hardware (emulators, devices) or conflict with other projects on the same port.
 
-```toml
-[jobs.run-long]
-# Tee output to centralized log file
-command = ["sh", "-c", "mkdir -p ../../.meta/logs && cargo run --color always 2>&1 | tee ../../.meta/logs/api.log"]
-need_stdout = true
+## Logging
 
-# Export errors/warnings to centralized location
-[exports.meta-locations]
-auto = true
-path = "../../.meta/logs/api-locations"
-line_format = "{kind}|{path}:{line}:{column}|{message}"
+Meta automatically captures output from all dev processes to `.meta/logs/<project>.log` using tmux's `pipe-pane`. ANSI escape codes are stripped so logs are readable even from TUI tools like bacon.
+
+```bash
+meta logs api           # View last 50 lines
+meta logs api -l 100    # View last 100 lines
+meta logs api -f        # Stream logs in real-time
 ```
+
+No `bacon.toml` changes are needed — meta handles log capture externally.
 
 ## Documentation
 
@@ -114,7 +126,18 @@ line_format = "{kind}|{path}:{line}:{column}|{message}"
 
 ## Changelog
 
-### v0.6.1 (Current)
+### v0.7.0 (Current)
+- **Project exclusion** - `dev_default = false` to exclude projects from default `meta dev` ([#1](https://github.com/wolven-tech/rust-v1/issues/1))
+- **Status filtering** - `meta status` only shows projects with a dev task ([#2](https://github.com/wolven-tech/rust-v1/issues/2))
+- **Bacon validation** - `meta doctor` warns about missing `bacon.toml` or undefined jobs ([#3](https://github.com/wolven-tech/rust-v1/issues/3))
+- **Process tree detection** - Walks full process tree to detect bacon-spawned processes ([#4](https://github.com/wolven-tech/rust-v1/issues/4))
+- **Log capture for bacon** - Uses `tmux pipe-pane` with ANSI stripping for all tools including bacon ([#5](https://github.com/wolven-tech/rust-v1/issues/5))
+- **Workspace-aware binary paths** - Detects Cargo workspaces and checks correct `target/` directory ([#6](https://github.com/wolven-tech/rust-v1/issues/6))
+- **Doctor accuracy** - Per-project dev task check is independent of shared paths ([#7](https://github.com/wolven-tech/rust-v1/issues/7))
+- **Library crate skipping** - Binary status checks skip library crates automatically
+- **48 tests** - 33 unit + 5 config + 10 integration tests
+
+### v0.6.1
 - Bacon logging fix - bacon jobs can now tee output to log files
 - Meta skips outer tee for bacon (avoids TUI escape code capture)
 - Centralized log location for multi-bacon monorepos
@@ -125,13 +148,13 @@ line_format = "{kind}|{path}:{line}:{column}|{message}"
 - `meta sessions` command
 - Fixed process detection via tmux pane queries
 
+<details>
+<summary>Earlier versions</summary>
+
 ### v0.5.0
 - Per-project log capture to `.meta/logs/<project>.log`
 - `meta logs` command with `--follow` and `--lines`
 - Log rotation at 10MB
-
-<details>
-<summary>Earlier versions</summary>
 
 ### v0.4.1
 - `meta status` command for process monitoring
@@ -155,7 +178,7 @@ line_format = "{kind}|{path}:{line}:{column}|{message}"
 
 ## Roadmap
 
-### v0.7.0 (Next)
+### v0.8.0 (Next)
 - Session save/restore
 - Environment support (dev, staging, prod)
 - Project dependency ordering
