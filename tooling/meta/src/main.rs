@@ -12,8 +12,11 @@ use config::Config;
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    // Initialize tracing
-    tracing_subscriber::fmt().with_target(false).init();
+    // Initialize tracing (write to stderr to keep stdout clean for --json)
+    tracing_subscriber::fmt()
+        .with_target(false)
+        .with_writer(std::io::stderr)
+        .init();
 
     let cli = Cli::parse();
 
@@ -26,10 +29,10 @@ async fn main() -> Result<()> {
             println!("✅ Created meta.toml configuration file");
             Ok(())
         }
-        Commands::Dev { projects } => {
+        Commands::Dev { projects, detach } => {
             info!("Starting development servers...");
             let config = Config::load()?;
-            execution::dev(&config, projects).await
+            execution::dev(&config, projects, detach).await
         }
         Commands::DevStop => {
             info!("Stopping development servers...");
@@ -55,9 +58,13 @@ async fn main() -> Result<()> {
             let config = Config::load()?;
             execution::doctor(&config).await
         }
-        Commands::Status { project, lines } => {
+        Commands::Status {
+            project,
+            lines,
+            json,
+        } => {
             let config = Config::load()?;
-            execution::status(&config, project, lines).await
+            execution::status(&config, project, lines, json).await
         }
         Commands::Logs {
             project,

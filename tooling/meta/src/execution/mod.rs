@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::io::IsTerminal;
 
 use anyhow::Result;
 use tokio::process::Command;
@@ -202,7 +203,11 @@ async fn find_active_pid(pane_pid: u32, session_name: &str, pane_index: Option<u
 /// ## Binary Modification Times
 /// apps/api/target/debug/api: 2025-12-08T12:05:30 (rebuilt 1h 20m ago)
 /// ```
-pub async fn status(config: &Config, project: Option<String>, lines: usize) -> Result<()> {
+pub async fn status(config: &Config, project: Option<String>, lines: usize, json: bool) -> Result<()> {
+    if json {
+        return status_json(config, project).await;
+    }
+
     let session_name = get_session_name();
 
     println!("=== META DEV STATUS ===");
@@ -423,6 +428,89 @@ pub async fn status(config: &Config, project: Option<String>, lines: usize) -> R
     }
 
     println!();
+    Ok(())
+}
+
+/// JSON output for `meta status --json`
+async fn status_json(config: &Config, project: Option<String>) -> Result<()> {
+    let session_name = get_session_name();
+
+    // Check session
+    let session_check = Command::new("tmux")
+        .args(["has-session", "-t", &session_name])
+        .output()
+        .await;
+    let session_active = session_check.map(|o| o.status.success()).unwrap_or(false);
+
+    let panes = if session_active {
+        get_tmux_panes(&session_name).await.unwrap_or_default()
+    } else {
+        vec![]
+    };
+
+    let dev_projects = config.projects_with_dev_task();
+    let mut project_statuses = Vec::new();
+
+    for (name, proj) in &dev_projects {
+        if let Some(ref filter) = project {
+            if name != filter {
+                continue;
+            }
+        }
+
+        let pane = panes.iter().find(|p| &p.title == name);
+        let mut status = "not running".to_string();
+        let mut pid: Option<u32> = None;
+        let mut uptime_seconds: Option<u64> = None;
+        let mut started_at: Option<String> = None;
+
+        if let Some(pane) = pane {
+            let active = find_active_pid(pane.pid, &session_name, Some(pane.index)).await;
+            if let Some(active_pid) = active {
+                pid = Some(active_pid);
+                status = "running".to_string();
+
+                let detail = Command::new("ps")
+                    .args(["-p", &active_pid.to_string(), "-o", "lstart,etime"])
+                    .output()
+                    .await;
+
+                if let Ok(detail) = detail {
+                    let detail_str = String::from_utf8_lossy(&detail.stdout);
+                    let lines: Vec<&str> = detail_str.lines().collect();
+                    if lines.len() >= 2 {
+                        let parts: Vec<&str> = lines[1].split_whitespace().collect();
+                        if parts.len() >= 6 {
+                            started_at = Some(parts[..5].join(" "));
+                            if let Some(secs) = parse_etime(parts.last().unwrap_or(&"")) {
+                                uptime_seconds = Some(secs);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        let tool = proj.tasks.get("dev").map(|t| t.tool.clone());
+
+        let entry = serde_json::json!({
+            "name": name,
+            "status": status,
+            "pid": pid,
+            "tool": tool,
+            "started_at": started_at,
+            "uptime_seconds": uptime_seconds,
+        });
+        project_statuses.push(entry);
+    }
+
+    let output = serde_json::json!({
+        "session": session_name,
+        "session_active": session_active,
+        "projects": project_statuses,
+    });
+
+    println!("{}", serde_json::to_string_pretty(&output)?);
     Ok(())
 }
 
@@ -684,7 +772,7 @@ pub async fn sessions() -> Result<()> {
     Ok(())
 }
 
-pub async fn dev(config: &Config, projects: Option<Vec<String>>) -> Result<()> {
+pub async fn dev(config: &Config, projects: Option<Vec<String>>, detach: bool) -> Result<()> {
     // When no projects specified, use default_dev_projects (respects dev_default flag)
     // When projects are explicitly specified with -p, use those regardless of dev_default
     let projects_to_run = if projects.is_some() {
@@ -739,11 +827,15 @@ pub async fn dev(config: &Config, projects: Option<Vec<String>>) -> Result<()> {
         .is_ok();
 
     if tmux_available && commands.len() > 1 {
+        // Detect non-interactive shell (CI, agent, script)
+        let is_interactive = std::io::stdin().is_terminal();
+        let should_detach = detach || !is_interactive;
+
         println!(
             "✨ Launching tmux session with {} panes...\n",
             commands.len()
         );
-        launch_tmux_session(&commands).await?;
+        launch_tmux_session(&commands, should_detach).await?;
     } else if !tmux_available {
         println!("⚠️  tmux not found. Install tmux to automatically launch all commands.");
         println!("   For now, run these commands manually in separate terminals.");
@@ -772,7 +864,7 @@ pub async fn dev(config: &Config, projects: Option<Vec<String>>) -> Result<()> {
     Ok(())
 }
 
-async fn launch_tmux_session(commands: &[(String, String)]) -> Result<()> {
+async fn launch_tmux_session(commands: &[(String, String)], detach: bool) -> Result<()> {
     let session_name = get_session_name();
 
     // Kill existing session if it exists
@@ -896,30 +988,41 @@ done"#,
         .output()
         .await?;
 
-    // Attach to the session
-    println!("📺 Attaching to tmux session '{}'...", session_name);
-    println!("\n╭─────────────────────────────────────────────────────────╮");
-    println!("│ 🎮 Tmux Navigation Guide                                │");
-    println!("├─────────────────────────────────────────────────────────┤");
-    println!("│ Navigate Panes:  Ctrl+B then Arrow Keys (← → ↑ ↓)      │");
-    println!("│ Zoom Pane:       Ctrl+B then Z (toggle full screen)    │");
-    println!("│ Show Numbers:    Ctrl+B then Q (then press number)     │");
-    println!("│                                                         │");
-    println!("│ Detach Session:  Ctrl+B then D (keeps running)         │");
-    println!("│ Stop Process:    Ctrl+C (in current pane)              │");
-    println!("│ Close Pane:      Ctrl+B then X (confirm with y)        │");
-    println!("╰─────────────────────────────────────────────────────────╯\n");
+    if detach {
+        // Detached mode: session is running in background
+        println!("✅ Tmux session '{}' started in background.", session_name);
+        println!("   Attach:  tmux attach -t {}", session_name);
+        println!("   Status:  meta status");
+        println!("   Stop:    meta dev:stop");
+    } else {
+        // Interactive mode: attach to the session
+        println!("📺 Attaching to tmux session '{}'...", session_name);
+        println!("\n╭─────────────────────────────────────────────────────────╮");
+        println!("│ 🎮 Tmux Navigation Guide                                │");
+        println!("├─────────────────────────────────────────────────────────┤");
+        println!("│ Navigate Panes:  Ctrl+B then Arrow Keys (← → ↑ ↓)      │");
+        println!("│ Zoom Pane:       Ctrl+B then Z (toggle full screen)    │");
+        println!("│ Show Numbers:    Ctrl+B then Q (then press number)     │");
+        println!("│                                                         │");
+        println!("│ Detach Session:  Ctrl+B then D (keeps running)         │");
+        println!("│ Stop Process:    Ctrl+C (in current pane)              │");
+        println!("│ Close Pane:      Ctrl+B then X (confirm with y)        │");
+        println!("╰─────────────────────────────────────────────────────────╯\n");
 
-    let status = Command::new("tmux")
-        .args(["attach-session", "-t", &session_name])
-        .stdin(std::process::Stdio::inherit())
-        .stdout(std::process::Stdio::inherit())
-        .stderr(std::process::Stdio::inherit())
-        .status()
-        .await?;
+        let status = Command::new("tmux")
+            .args(["attach-session", "-t", &session_name])
+            .stdin(std::process::Stdio::inherit())
+            .stdout(std::process::Stdio::inherit())
+            .stderr(std::process::Stdio::inherit())
+            .status()
+            .await?;
 
-    if !status.success() {
-        anyhow::bail!("Failed to attach to tmux session");
+        if !status.success() {
+            // Provide a helpful message instead of a scary error
+            println!("ℹ️  Tmux session '{}' is running (could not attach — no terminal).", session_name);
+            println!("   Attach with: tmux attach -t {}", session_name);
+            println!("   Check status: meta status");
+        }
     }
 
     Ok(())

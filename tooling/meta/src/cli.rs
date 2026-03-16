@@ -19,6 +19,10 @@ pub enum Commands {
         /// Specific projects to run (optional)
         #[arg(short, long)]
         projects: Option<Vec<String>>,
+
+        /// Start in background without attaching to tmux (useful for CI/agents)
+        #[arg(short, long)]
+        detach: bool,
     },
 
     /// Stop all running tmux development sessions
@@ -37,6 +41,10 @@ pub enum Commands {
         /// Number of recent log entries to show (default: 20)
         #[arg(short, long, default_value = "20")]
         lines: usize,
+
+        /// Output JSON for programmatic consumption
+        #[arg(long)]
+        json: bool,
     },
 
     /// Build projects

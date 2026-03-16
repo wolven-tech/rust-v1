@@ -48,8 +48,10 @@ meta dev
 |---------|-------------|
 | `meta dev` | Start all dev servers in tmux |
 | `meta dev -p api web` | Start specific projects only |
+| `meta dev -d` | Start in background (for CI/agents) |
 | `meta dev:stop` | Stop all dev processes |
 | `meta status` | Show running processes and logs |
+| `meta status --json` | JSON output for programmatic use |
 | `meta logs <project>` | View project logs (`-f` to follow) |
 | `meta sessions` | List all active meta sessions |
 | `meta build [--prod]` | Build all projects |
@@ -126,7 +128,13 @@ No `bacon.toml` changes are needed — meta handles log capture externally.
 
 ## Changelog
 
-### v0.7.0 (Current)
+### v0.7.1 (Current)
+- **Detach mode** — `meta dev -d` / `meta dev --detach` starts services without attaching to tmux ([#8](https://github.com/wolven-tech/rust-v1/issues/8))
+- **Non-interactive detection** — Auto-detaches when run from CI, agents, or scripts (no more "failed to attach" errors)
+- **JSON status output** — `meta status --json` for programmatic consumption by AI agents and scripts ([#9](https://github.com/wolven-tech/rust-v1/issues/9))
+- **Tracing to stderr** — Log output no longer pollutes stdout (clean JSON/pipe output)
+
+### v0.7.0
 - **Project exclusion** - `dev_default = false` to exclude projects from default `meta dev` ([#1](https://github.com/wolven-tech/rust-v1/issues/1))
 - **Status filtering** - `meta status` only shows projects with a dev task ([#2](https://github.com/wolven-tech/rust-v1/issues/2))
 - **Bacon validation** - `meta doctor` warns about missing `bacon.toml` or undefined jobs ([#3](https://github.com/wolven-tech/rust-v1/issues/3))

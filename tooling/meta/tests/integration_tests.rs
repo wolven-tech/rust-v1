@@ -304,3 +304,145 @@ fn test_meta_test_requires_config() {
         .failure()
         .stderr(predicate::str::contains("meta.toml not found"));
 }
+
+// Issue #8: meta dev --detach flag exists
+#[test]
+fn test_meta_dev_detach_flag_accepted() {
+    let temp_dir = TempDir::new().unwrap();
+    let mut cmd = cargo_bin_cmd!("meta");
+    cmd.current_dir(&temp_dir);
+    cmd.args(["dev", "--help"]);
+    cmd.assert()
+        .success()
+        .stdout(predicate::str::contains("--detach"));
+}
+
+// Issue #9: meta status --json outputs valid JSON
+#[test]
+fn test_meta_status_json_output() {
+    let temp_dir = TempDir::new().unwrap();
+    let api_path = temp_dir.path().join("apps/api");
+    fs::create_dir_all(api_path.join("src")).unwrap();
+    fs::write(api_path.join("src/main.rs"), "fn main() {}").unwrap();
+    fs::write(
+        api_path.join("Cargo.toml"),
+        "[package]\nname = \"api\"\nversion = \"0.1.0\"\n",
+    )
+    .unwrap();
+
+    fs::write(
+        temp_dir.path().join("meta.toml"),
+        r#"version = "1"
+
+[workspace]
+name = "Test"
+root = "."
+
+[tools.bacon]
+enabled = true
+command = "bacon"
+
+[projects.api]
+type = "rust"
+path = "apps/api"
+
+[projects.api.tasks]
+dev = { tool = "bacon", command = "run-long" }
+"#,
+    )
+    .unwrap();
+
+    let mut cmd = cargo_bin_cmd!("meta");
+    cmd.current_dir(&temp_dir);
+    cmd.args(["status", "--json"]);
+
+    let output = cmd.output().unwrap();
+    let stdout = String::from_utf8_lossy(&output.stdout);
+
+    // Should be valid JSON
+    let parsed: serde_json::Value = serde_json::from_str(&stdout)
+        .unwrap_or_else(|e| panic!("Invalid JSON output: {}\nOutput: {}", e, stdout));
+
+    // Should have session and projects fields
+    assert!(parsed.get("session").is_some(), "Missing 'session' field");
+    assert!(parsed.get("projects").is_some(), "Missing 'projects' field");
+
+    let projects = parsed["projects"].as_array().unwrap();
+    assert_eq!(projects.len(), 1);
+    assert_eq!(projects[0]["name"], "api");
+    assert_eq!(projects[0]["status"], "not running");
+    assert_eq!(projects[0]["tool"], "bacon");
+}
+
+// Issue #9: meta status --json excludes projects without dev task
+#[test]
+fn test_meta_status_json_excludes_libraries() {
+    let temp_dir = TempDir::new().unwrap();
+    let api_path = temp_dir.path().join("apps/api");
+    fs::create_dir_all(api_path.join("src")).unwrap();
+    fs::write(api_path.join("src/main.rs"), "fn main() {}").unwrap();
+    fs::write(
+        api_path.join("Cargo.toml"),
+        "[package]\nname = \"api\"\nversion = \"0.1.0\"\n",
+    )
+    .unwrap();
+
+    let shared_path = temp_dir.path().join("crates/shared");
+    fs::create_dir_all(shared_path.join("src")).unwrap();
+    fs::write(shared_path.join("src/lib.rs"), "").unwrap();
+    fs::write(
+        shared_path.join("Cargo.toml"),
+        "[package]\nname = \"shared\"\nversion = \"0.1.0\"\n",
+    )
+    .unwrap();
+
+    fs::write(
+        temp_dir.path().join("meta.toml"),
+        r#"version = "1"
+
+[workspace]
+name = "Test"
+root = "."
+
+[tools.bacon]
+enabled = true
+command = "bacon"
+
+[tools.cargo]
+enabled = true
+command = "cargo"
+
+[projects.api]
+type = "rust"
+path = "apps/api"
+
+[projects.api.tasks]
+dev = { tool = "bacon", command = "run-long" }
+
+[projects.shared]
+type = "rust"
+path = "crates/shared"
+
+[projects.shared.tasks]
+build = { tool = "cargo", command = "build" }
+"#,
+    )
+    .unwrap();
+
+    let mut cmd = cargo_bin_cmd!("meta");
+    cmd.current_dir(&temp_dir);
+    cmd.args(["status", "--json"]);
+
+    let output = cmd.output().unwrap();
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let parsed: serde_json::Value = serde_json::from_str(&stdout).unwrap();
+
+    let projects = parsed["projects"].as_array().unwrap();
+    let names: Vec<&str> = projects
+        .iter()
+        .map(|p| p["name"].as_str().unwrap())
+        .collect();
+
+    assert!(names.contains(&"api"));
+    assert!(!names.contains(&"shared"), "Library crate should not appear in JSON output");
+}
