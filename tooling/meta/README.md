@@ -57,8 +57,9 @@ meta dev
 | `meta build [--prod]` | Build all projects |
 | `meta test` | Run all tests |
 | `meta run <task>` | Run any task (fmt, clippy, audit) |
-| `meta doctor` | Validate configuration |
-| `meta init` | Generate meta.toml |
+| `meta doctor` | Validate configuration (checks docker if `.mcp.json` uses it) |
+| `meta init` | Generate `meta.toml` + `.mcp.json` for mcp-log-server |
+| `meta init --no-mcp` | Generate `meta.toml` only (skip `.mcp.json`) |
 
 ## Configuration
 
@@ -120,6 +121,17 @@ meta logs api -f        # Stream logs in real-time
 
 No `bacon.toml` changes are needed — meta handles log capture externally.
 
+## MCP Log Server Integration
+
+`meta init` writes an [`mcp-log-server`](https://github.com/wolven-tech/mcp-log-server) entry to `.mcp.json` by default, pointed at `./.meta/logs`. This lets Claude Code (and any MCP client) tail and search per-project dev-server logs without extra setup.
+
+```bash
+meta init              # writes meta.toml + .mcp.json (mcp-log-server via Docker)
+meta init --no-mcp     # skip .mcp.json if you don't use MCP
+```
+
+The generated entry uses `docker run ghcr.io/wolven-tech/mcp-log-server:latest` with `LOG_DIR=/logs` mounted from `./.meta/logs`. `meta doctor` warns if `.mcp.json` references `docker` but docker isn't on `PATH`.
+
 ## Documentation
 
 - **[User Guide](docs/USER_GUIDE.md)** - Daily workflow, tmux navigation, troubleshooting
@@ -128,7 +140,11 @@ No `bacon.toml` changes are needed — meta handles log capture externally.
 
 ## Changelog
 
-### v0.7.1 (Current)
+### v0.7.2 (Current)
+- **MCP log server integration** — `meta init` writes a default `mcp-log-server` entry to `.mcp.json` pointed at `./.meta/logs`. Pass `--no-mcp` to opt out.
+- **Doctor docker check** — `meta doctor` warns when `.mcp.json` references docker but docker isn't on `PATH`.
+
+### v0.7.1
 - **Detach mode** — `meta dev -d` / `meta dev --detach` starts services without attaching to tmux ([#8](https://github.com/wolven-tech/rust-v1/issues/8))
 - **Non-interactive detection** — Auto-detaches when run from CI, agents, or scripts (no more "failed to attach" errors)
 - **JSON status output** — `meta status --json` for programmatic consumption by AI agents and scripts ([#9](https://github.com/wolven-tech/rust-v1/issues/9))

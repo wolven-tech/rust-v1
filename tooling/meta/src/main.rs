@@ -23,10 +23,14 @@ async fn main() -> Result<()> {
     info!("Meta orchestrator starting...");
 
     match cli.command {
-        Commands::Init => {
+        Commands::Init { no_mcp } => {
             info!("Initializing meta configuration...");
-            config::init()?;
+            let with_mcp = !no_mcp;
+            config::init(with_mcp)?;
             println!("✅ Created meta.toml configuration file");
+            if with_mcp {
+                println!("✅ Added mcp-log-server entry to .mcp.json");
+            }
             Ok(())
         }
         Commands::Dev { projects, detach } => {

@@ -1217,6 +1217,26 @@ pub fn is_library_crate(project_path: &str) -> bool {
 }
 
 /// Validate that a bacon-based task has a valid bacon.toml configuration
+/// Returns true if `.mcp.json` at `path` contains an mcpServers entry whose
+/// `command` field is `"docker"`. Missing/invalid files return false.
+pub fn mcp_json_references_docker(path: &std::path::Path) -> bool {
+    let Ok(contents) = std::fs::read_to_string(path) else {
+        return false;
+    };
+    let Ok(value) = serde_json::from_str::<serde_json::Value>(&contents) else {
+        return false;
+    };
+    value
+        .get("mcpServers")
+        .and_then(|s| s.as_object())
+        .map(|servers| {
+            servers
+                .values()
+                .any(|entry| entry.get("command").and_then(|c| c.as_str()) == Some("docker"))
+        })
+        .unwrap_or(false)
+}
+
 pub fn validate_bacon_config(project_path: &str, command: &str) -> Vec<String> {
     let mut warnings = Vec::new();
 
@@ -1323,6 +1343,27 @@ pub async fn doctor(config: &Config) -> Result<()> {
             println!("  ⚠ tmux not found (install for 'meta dev' multi-process mode)");
             println!("    Install: brew install tmux (macOS) or apt install tmux (Linux)");
             warnings += 1;
+        }
+    }
+
+    // Check MCP integration (docker required if .mcp.json uses it)
+    let mcp_path = std::path::Path::new(".mcp.json");
+    if mcp_path.exists() && mcp_json_references_docker(mcp_path) {
+        println!("\n🐳 MCP Integration:");
+        match tokio::process::Command::new("docker")
+            .arg("--version")
+            .output()
+            .await
+        {
+            Ok(output) if output.status.success() => {
+                let version = String::from_utf8_lossy(&output.stdout).trim().to_string();
+                println!("  ✓ docker → {} (.mcp.json references docker)", version);
+            }
+            _ => {
+                println!("  ⚠ .mcp.json references docker but docker not found on PATH");
+                println!("    Install Docker to use mcp-log-server, or re-run 'meta init --no-mcp' to opt out");
+                warnings += 1;
+            }
         }
     }
 
@@ -1670,6 +1711,46 @@ command = ["cargo", "run"]
         let warnings =
             validate_bacon_config(&project_path.to_string_lossy(), "run-long");
         assert!(warnings.is_empty(), "unexpected warnings: {:?}", warnings);
+    }
+
+    // === mcp_json_references_docker ===
+
+    #[test]
+    fn test_mcp_references_docker_true_when_command_is_docker() {
+        let tmp = tempfile::TempDir::new().unwrap();
+        let path = tmp.path().join(".mcp.json");
+        std::fs::write(
+            &path,
+            r#"{"mcpServers":{"mcp-log-server":{"command":"docker","args":[]}}}"#,
+        )
+        .unwrap();
+        assert!(mcp_json_references_docker(&path));
+    }
+
+    #[test]
+    fn test_mcp_references_docker_false_when_no_docker_entry() {
+        let tmp = tempfile::TempDir::new().unwrap();
+        let path = tmp.path().join(".mcp.json");
+        std::fs::write(
+            &path,
+            r#"{"mcpServers":{"other":{"command":"npx","args":[]}}}"#,
+        )
+        .unwrap();
+        assert!(!mcp_json_references_docker(&path));
+    }
+
+    #[test]
+    fn test_mcp_references_docker_false_when_file_missing() {
+        let tmp = tempfile::TempDir::new().unwrap();
+        assert!(!mcp_json_references_docker(&tmp.path().join("absent.json")));
+    }
+
+    #[test]
+    fn test_mcp_references_docker_false_when_malformed() {
+        let tmp = tempfile::TempDir::new().unwrap();
+        let path = tmp.path().join(".mcp.json");
+        std::fs::write(&path, "not json").unwrap();
+        assert!(!mcp_json_references_docker(&path));
     }
 
     // === Existing: parse_etime ===

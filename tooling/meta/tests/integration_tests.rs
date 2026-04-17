@@ -446,3 +446,42 @@ build = { tool = "cargo", command = "build" }
     assert!(names.contains(&"api"));
     assert!(!names.contains(&"shared"), "Library crate should not appear in JSON output");
 }
+
+// `meta init` writes an mcp-log-server entry to .mcp.json by default
+#[test]
+fn test_init_writes_mcp_json_by_default() {
+    let temp_dir = TempDir::new().unwrap();
+
+    let mut cmd = cargo_bin_cmd!("meta");
+    cmd.current_dir(&temp_dir);
+    cmd.arg("init");
+
+    cmd.assert().success();
+
+    let mcp_path = temp_dir.path().join(".mcp.json");
+    assert!(mcp_path.exists(), ".mcp.json should be created by default");
+
+    let value: serde_json::Value =
+        serde_json::from_str(&fs::read_to_string(&mcp_path).unwrap()).unwrap();
+    let entry = &value["mcpServers"]["mcp-log-server"];
+    assert_eq!(entry["command"], "docker");
+    let args = entry["args"].as_array().unwrap();
+    assert!(args.iter().any(|v| v == "LOG_DIR=/logs"));
+}
+
+// `meta init --no-mcp` skips writing .mcp.json
+#[test]
+fn test_init_no_mcp_skips_mcp_json() {
+    let temp_dir = TempDir::new().unwrap();
+
+    let mut cmd = cargo_bin_cmd!("meta");
+    cmd.current_dir(&temp_dir);
+    cmd.args(["init", "--no-mcp"]);
+
+    cmd.assert().success();
+
+    assert!(
+        !temp_dir.path().join(".mcp.json").exists(),
+        ".mcp.json should not be created with --no-mcp"
+    );
+}

@@ -80,7 +80,7 @@ impl Config {
     }
 }
 
-pub fn init() -> Result<()> {
+pub fn init(with_mcp: bool) -> Result<()> {
     // Auto-detect projects in the monorepo
     let detected_projects = detect_projects()?;
 
@@ -88,6 +88,51 @@ pub fn init() -> Result<()> {
     let config = generate_config(&detected_projects)?;
 
     fs::write("meta.toml", config)?;
+
+    if with_mcp {
+        write_mcp_log_server_entry(Path::new(".mcp.json"))?;
+    }
+    Ok(())
+}
+
+/// Merge an mcp-log-server entry into `.mcp.json`, creating the file if absent.
+///
+/// Idempotent: if an `mcp-log-server` entry already exists, leaves it alone.
+fn write_mcp_log_server_entry(path: &Path) -> Result<()> {
+    let mut root: serde_json::Value = if path.exists() {
+        serde_json::from_str(&fs::read_to_string(path)?)?
+    } else {
+        serde_json::json!({ "mcpServers": {} })
+    };
+
+    let root_obj = root
+        .as_object_mut()
+        .ok_or_else(|| anyhow::anyhow!(".mcp.json: root must be a JSON object"))?;
+
+    let servers = root_obj
+        .entry("mcpServers")
+        .or_insert_with(|| serde_json::json!({}))
+        .as_object_mut()
+        .ok_or_else(|| anyhow::anyhow!(".mcp.json: mcpServers must be an object"))?;
+
+    if servers.contains_key("mcp-log-server") {
+        return Ok(());
+    }
+
+    servers.insert(
+        "mcp-log-server".into(),
+        serde_json::json!({
+            "command": "docker",
+            "args": [
+                "run", "--rm", "-i",
+                "-v", "./.meta/logs:/logs",
+                "-e", "LOG_DIR=/logs",
+                "ghcr.io/wolven-tech/mcp-log-server:latest"
+            ]
+        }),
+    );
+
+    fs::write(path, serde_json::to_string_pretty(&root)?)?;
     Ok(())
 }
 
@@ -439,5 +484,70 @@ build = { tool = "tauri", command = "android build --target aarch64" }
         let config = parse(test_config_toml()).unwrap();
         assert!(config.projects["api"].dev_default);
         assert!(!config.projects["trainee-android"].dev_default);
+    }
+
+    #[test]
+    fn test_write_mcp_entry_creates_file_when_absent() {
+        let tmp = tempfile::tempdir().unwrap();
+        let path = tmp.path().join(".mcp.json");
+
+        write_mcp_log_server_entry(&path).unwrap();
+
+        let contents = fs::read_to_string(&path).unwrap();
+        let value: serde_json::Value = serde_json::from_str(&contents).unwrap();
+        let entry = &value["mcpServers"]["mcp-log-server"];
+        assert_eq!(entry["command"], "docker");
+        let args = entry["args"].as_array().unwrap();
+        assert!(args.iter().any(|v| v == "LOG_DIR=/logs"));
+        assert!(args.iter().any(|v| v == "./.meta/logs:/logs"));
+    }
+
+    #[test]
+    fn test_write_mcp_entry_preserves_existing_servers() {
+        let tmp = tempfile::tempdir().unwrap();
+        let path = tmp.path().join(".mcp.json");
+        fs::write(
+            &path,
+            r#"{"mcpServers":{"other":{"command":"npx","args":["-y","some-pkg"]}}}"#,
+        )
+        .unwrap();
+
+        write_mcp_log_server_entry(&path).unwrap();
+
+        let value: serde_json::Value =
+            serde_json::from_str(&fs::read_to_string(&path).unwrap()).unwrap();
+        assert_eq!(value["mcpServers"]["other"]["command"], "npx");
+        assert_eq!(value["mcpServers"]["mcp-log-server"]["command"], "docker");
+    }
+
+    #[test]
+    fn test_write_mcp_entry_is_idempotent() {
+        let tmp = tempfile::tempdir().unwrap();
+        let path = tmp.path().join(".mcp.json");
+        fs::write(
+            &path,
+            r#"{"mcpServers":{"mcp-log-server":{"command":"custom","args":[]}}}"#,
+        )
+        .unwrap();
+
+        write_mcp_log_server_entry(&path).unwrap();
+
+        // User's existing entry should be preserved, not overwritten
+        let value: serde_json::Value =
+            serde_json::from_str(&fs::read_to_string(&path).unwrap()).unwrap();
+        assert_eq!(value["mcpServers"]["mcp-log-server"]["command"], "custom");
+    }
+
+    #[test]
+    fn test_write_mcp_entry_adds_mcp_servers_key_when_missing() {
+        let tmp = tempfile::tempdir().unwrap();
+        let path = tmp.path().join(".mcp.json");
+        fs::write(&path, r#"{}"#).unwrap();
+
+        write_mcp_log_server_entry(&path).unwrap();
+
+        let value: serde_json::Value =
+            serde_json::from_str(&fs::read_to_string(&path).unwrap()).unwrap();
+        assert_eq!(value["mcpServers"]["mcp-log-server"]["command"], "docker");
     }
 }

@@ -12,7 +12,11 @@ pub struct Cli {
 #[derive(Subcommand)]
 pub enum Commands {
     /// Initialize meta configuration
-    Init,
+    Init {
+        /// Skip writing an mcp-log-server entry to .mcp.json
+        #[arg(long = "no-mcp")]
+        no_mcp: bool,
+    },
 
     /// Start development servers for all projects
     Dev {
