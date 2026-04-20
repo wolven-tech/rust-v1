@@ -140,7 +140,10 @@ The generated entry uses `docker run ghcr.io/wolven-tech/mcp-log-server:latest` 
 
 ## Changelog
 
-### v0.7.2 (Current)
+### v0.7.3 (Current)
+- **Docker auto-detection** — `meta init` scans for `docker-compose.yml`/`compose.yaml` at repo root and in `apps/*`; when found, auto-emits a `[tools.docker]` block so projects can use `tool = "docker"` in tasks without manual declaration.
+
+### v0.7.2
 - **MCP log server integration** — `meta init` writes a default `mcp-log-server` entry to `.mcp.json` pointed at `./.meta/logs`. Pass `--no-mcp` to opt out.
 - **Doctor docker check** — `meta doctor` warns when `.mcp.json` references docker but docker isn't on `PATH`.
 

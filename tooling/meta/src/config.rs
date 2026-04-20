@@ -83,9 +83,10 @@ impl Config {
 pub fn init(with_mcp: bool) -> Result<()> {
     // Auto-detect projects in the monorepo
     let detected_projects = detect_projects()?;
+    let docker_detected = detect_docker(Path::new("."));
 
     // Generate configuration based on detected projects
-    let config = generate_config(&detected_projects)?;
+    let config = generate_config(&detected_projects, docker_detected)?;
 
     fs::write("meta.toml", config)?;
 
@@ -134,6 +135,38 @@ fn write_mcp_log_server_entry(path: &Path) -> Result<()> {
 
     fs::write(path, serde_json::to_string_pretty(&root)?)?;
     Ok(())
+}
+
+const COMPOSE_FILES: &[&str] = &[
+    "docker-compose.yml",
+    "docker-compose.yaml",
+    "compose.yml",
+    "compose.yaml",
+];
+
+fn detect_docker(root: &Path) -> bool {
+    for f in COMPOSE_FILES {
+        if root.join(f).exists() {
+            return true;
+        }
+    }
+
+    if let Ok(entries) = fs::read_dir(root.join("apps")) {
+        for entry in entries.flatten() {
+            let Ok(ft) = entry.file_type() else { continue };
+            if !ft.is_dir() {
+                continue;
+            }
+            let path = entry.path();
+            for f in COMPOSE_FILES {
+                if path.join(f).exists() {
+                    return true;
+                }
+            }
+        }
+    }
+
+    false
 }
 
 fn detect_projects() -> Result<Vec<DetectedProject>> {
@@ -207,7 +240,7 @@ pub fn parse(contents: &str) -> Result<Config> {
     Ok(config)
 }
 
-fn generate_config(projects: &[DetectedProject]) -> Result<String> {
+fn generate_config(projects: &[DetectedProject], docker: bool) -> Result<String> {
     let mut config = String::from(
         r#"version = "1"
 
@@ -236,6 +269,17 @@ for_tasks = ["build", "test"]
 
 "#,
     );
+
+    if docker {
+        config.push_str(
+            r#"[tools.docker]
+enabled = true
+command = "docker"
+for_tasks = ["dev"]
+
+"#,
+        );
+    }
 
     // Add detected projects
     config.push_str("# Project definitions\n");
@@ -484,6 +528,52 @@ build = { tool = "tauri", command = "android build --target aarch64" }
         let config = parse(test_config_toml()).unwrap();
         assert!(config.projects["api"].dev_default);
         assert!(!config.projects["trainee-android"].dev_default);
+    }
+
+    #[test]
+    fn test_detect_docker_finds_compose_at_root() {
+        let tmp = tempfile::tempdir().unwrap();
+        fs::write(tmp.path().join("docker-compose.yml"), "services: {}\n").unwrap();
+        assert!(detect_docker(tmp.path()));
+    }
+
+    #[test]
+    fn test_detect_docker_finds_compose_in_apps_subdir() {
+        let tmp = tempfile::tempdir().unwrap();
+        fs::create_dir_all(tmp.path().join("apps/redis")).unwrap();
+        fs::write(tmp.path().join("apps/redis/compose.yaml"), "services: {}\n").unwrap();
+        assert!(detect_docker(tmp.path()));
+    }
+
+    #[test]
+    fn test_detect_docker_returns_false_when_absent() {
+        let tmp = tempfile::tempdir().unwrap();
+        fs::create_dir_all(tmp.path().join("apps/api")).unwrap();
+        fs::write(tmp.path().join("apps/api/Cargo.toml"), "[package]\n").unwrap();
+        assert!(!detect_docker(tmp.path()));
+    }
+
+    #[test]
+    fn test_generate_config_emits_docker_tool_when_detected() {
+        let project = DetectedProject {
+            name: "api".into(),
+            path: "apps/api".into(),
+            project_type: ProjectType::Rust,
+            package_name: None,
+        };
+        let output = generate_config(&[project], true).unwrap();
+        assert!(output.contains("[tools.docker]"));
+        assert!(output.contains("command = \"docker\""));
+        // Generated config must parse back into a valid Config
+        let parsed = parse(&output).unwrap();
+        assert!(parsed.tools.contains_key("docker"));
+        assert_eq!(parsed.tools["docker"].command, "docker");
+    }
+
+    #[test]
+    fn test_generate_config_omits_docker_tool_when_not_detected() {
+        let output = generate_config(&[], false).unwrap();
+        assert!(!output.contains("[tools.docker]"));
     }
 
     #[test]
