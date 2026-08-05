@@ -53,6 +53,14 @@ jobs:
       - name: Run tests
         run: cargo test --verbose
 
+      # tooling/meta is audited in meta-ci.yml; without this step apps/api
+      # dependencies were never scanned.
+      - name: Install cargo-audit
+        run: cargo install cargo-audit --locked
+
+      - name: Security audit
+        run: cargo audit
+
   meta-orchestrator:
     name: Meta Orchestrator
     runs-on: ubuntu-latest
