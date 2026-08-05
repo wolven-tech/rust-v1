@@ -110,7 +110,11 @@ fn collect_descendants(tree: &HashMap<u32, Vec<u32>>, pid: u32) -> Vec<u32> {
 /// This handles the bacon case where: shell → bacon → cargo → binary
 /// If the shell exits, children are reparented to launchd (pid 1) on macOS,
 /// making pgrep -P unreliable. The full process tree snapshot avoids this.
-async fn find_active_pid(pane_pid: u32, session_name: &str, pane_index: Option<usize>) -> Option<u32> {
+async fn find_active_pid(
+    pane_pid: u32,
+    session_name: &str,
+    pane_index: Option<usize>,
+) -> Option<u32> {
     // Strategy 1: Check if the pane PID itself is alive
     let direct_check = Command::new("ps")
         .args(["-p", &pane_pid.to_string(), "-o", "pid="])
@@ -125,10 +129,7 @@ async fn find_active_pid(pane_pid: u32, session_name: &str, pane_index: Option<u
     }
 
     // Strategy 2: Build full process tree and find descendants
-    let ps_output = Command::new("ps")
-        .args(["-axo", "pid,ppid"])
-        .output()
-        .await;
+    let ps_output = Command::new("ps").args(["-axo", "pid,ppid"]).output().await;
 
     if let Ok(output) = ps_output {
         let stdout = String::from_utf8_lossy(&output.stdout);
@@ -203,7 +204,12 @@ async fn find_active_pid(pane_pid: u32, session_name: &str, pane_index: Option<u
 /// ## Binary Modification Times
 /// apps/api/target/debug/api: 2025-12-08T12:05:30 (rebuilt 1h 20m ago)
 /// ```
-pub async fn status(config: &Config, project: Option<String>, lines: usize, json: bool) -> Result<()> {
+pub async fn status(
+    config: &Config,
+    project: Option<String>,
+    lines: usize,
+    json: bool,
+) -> Result<()> {
     if json {
         return status_json(config, project).await;
     }
@@ -341,8 +347,7 @@ pub async fn status(config: &Config, project: Option<String>, lines: usize, json
         let binary_name = get_rust_binary_name(&proj.path).unwrap_or_else(|| name.clone());
         // Use workspace-aware binary path
         let workspace_root = detect_cargo_workspace(&proj.path);
-        let binary_path =
-            get_rust_binary_path(&proj.path, &binary_name, workspace_root.as_deref());
+        let binary_path = get_rust_binary_path(&proj.path, &binary_name, workspace_root.as_deref());
         let path = std::path::Path::new(&binary_path);
 
         if path.exists() {
@@ -357,8 +362,9 @@ pub async fn status(config: &Config, project: Option<String>, lines: usize, json
                     // Check if there's a running pane for this project
                     // Walk process tree to find active PID (handles bacon grandchildren)
                     if let Some(pane) = panes.iter().find(|p| p.title == *name) {
-                        let active_pid =
-                            find_active_pid(pane.pid, &session_name, Some(pane.index)).await.unwrap_or(pane.pid);
+                        let active_pid = find_active_pid(pane.pid, &session_name, Some(pane.index))
+                            .await
+                            .unwrap_or(pane.pid);
                         // Get elapsed time using ps -o etime (format: [[DD-]HH:]MM:SS)
                         let etime_output = Command::new("ps")
                             .args(["-p", &active_pid.to_string(), "-o", "etime="])
@@ -1019,7 +1025,10 @@ done"#,
 
         if !status.success() {
             // Provide a helpful message instead of a scary error
-            println!("ℹ️  Tmux session '{}' is running (could not attach — no terminal).", session_name);
+            println!(
+                "ℹ️  Tmux session '{}' is running (could not attach — no terminal).",
+                session_name
+            );
             println!("   Attach with: tmux attach -t {}", session_name);
             println!("   Check status: meta status");
         }
@@ -1532,7 +1541,10 @@ build = { tool = "bacon", command = "build" }
         // trainee-app has dev task
         assert!(project_has_task(&config.projects["trainee-app"], "dev"));
         // trainee-android does NOT have dev task (same path, different project)
-        assert!(!project_has_task(&config.projects["trainee-android"], "dev"));
+        assert!(!project_has_task(
+            &config.projects["trainee-android"],
+            "dev"
+        ));
     }
 
     // === Issue #6: binary path detection ===
@@ -1694,8 +1706,7 @@ command = ["cargo", "run"]
         )
         .unwrap();
 
-        let warnings =
-            validate_bacon_config(&project_path.to_string_lossy(), "run-long");
+        let warnings = validate_bacon_config(&project_path.to_string_lossy(), "run-long");
         assert!(warnings.is_empty(), "unexpected warnings: {:?}", warnings);
     }
 
@@ -1708,8 +1719,7 @@ command = ["cargo", "run"]
         std::fs::write(project_path.join("bacon.toml"), "").unwrap();
 
         // "run-long" is a builtin job
-        let warnings =
-            validate_bacon_config(&project_path.to_string_lossy(), "run-long");
+        let warnings = validate_bacon_config(&project_path.to_string_lossy(), "run-long");
         assert!(warnings.is_empty(), "unexpected warnings: {:?}", warnings);
     }
 
@@ -1779,7 +1789,8 @@ command = ["cargo", "run"]
 
     #[test]
     fn test_build_process_tree_basic() {
-        let ps_output = "  PID  PPID\n    1     0\n  100     1\n  200   100\n  300   100\n  400   200\n";
+        let ps_output =
+            "  PID  PPID\n    1     0\n  100     1\n  200   100\n  300   100\n  400   200\n";
         let tree = build_process_tree(ps_output);
 
         assert_eq!(tree.get(&0), Some(&vec![1]));
@@ -1798,7 +1809,8 @@ command = ["cargo", "run"]
 
     #[test]
     fn test_collect_descendants_full_tree() {
-        let ps_output = "  PID  PPID\n    1     0\n  100     1\n  200   100\n  300   100\n  400   200\n";
+        let ps_output =
+            "  PID  PPID\n    1     0\n  100     1\n  200   100\n  300   100\n  400   200\n";
         let tree = build_process_tree(ps_output);
         let mut descendants = collect_descendants(&tree, 100);
         descendants.sort();
@@ -1825,8 +1837,7 @@ command = ["cargo", "run"]
     // shell(100) → bacon(200) → cargo(300) → binary(400)
     #[test]
     fn test_collect_descendants_bacon_tree() {
-        let ps_output =
-            "  PID  PPID\n  100     1\n  200   100\n  300   200\n  400   300\n";
+        let ps_output = "  PID  PPID\n  100     1\n  200   100\n  300   200\n  400   300\n";
         let tree = build_process_tree(ps_output);
         let descendants = collect_descendants(&tree, 100);
         // Should find all: bacon, cargo, binary

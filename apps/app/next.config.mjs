@@ -3,10 +3,9 @@ import { withSentryConfig } from "@sentry/nextjs";
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // instrumentation.ts is stable since Next 15; the experimental
+  // `instrumentationHook` flag was removed.
   transpilePackages: ["@rust-v1/supabase"],
-  experimental: {
-    instrumentationHook: process.env.NODE_ENV === "production",
-  },
 };
 
 export default withSentryConfig(nextConfig, {
@@ -14,6 +13,10 @@ export default withSentryConfig(nextConfig, {
   telemetry: false,
   widenClientFileUpload: true,
   hideSourceMaps: true,
-  disableLogger: true,
+  webpack: {
+    treeshake: {
+      removeDebugLogging: true,
+    },
+  },
   tunnelRoute: "/monitoring",
 });

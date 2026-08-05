@@ -78,7 +78,10 @@ build = { tool = "cargo", command = "build" }
         if in_android_section {
             // The next line after trainee-android's project line
             // should NOT say "dev task configured"
-            if line.trim().starts_with("•") || line.trim().starts_with("✓") || line.trim().starts_with("✗") {
+            if line.trim().starts_with("•")
+                || line.trim().starts_with("✓")
+                || line.trim().starts_with("✗")
+            {
                 // We've moved past trainee-android's details
                 break;
             }
@@ -162,9 +165,7 @@ build = { tool = "cargo", command = "build" }
         .take_while(|l| !l.contains("## Recent Events"))
         .collect();
 
-    let shared_in_processes = processes_section
-        .iter()
-        .any(|l| l.starts_with("shared"));
+    let shared_in_processes = processes_section.iter().any(|l| l.starts_with("shared"));
     assert!(
         !shared_in_processes,
         "Library crate 'shared' should not appear in Running Processes"
@@ -444,7 +445,10 @@ build = { tool = "cargo", command = "build" }
         .collect();
 
     assert!(names.contains(&"api"));
-    assert!(!names.contains(&"shared"), "Library crate should not appear in JSON output");
+    assert!(
+        !names.contains(&"shared"),
+        "Library crate should not appear in JSON output"
+    );
 }
 
 // `meta init` writes an mcp-log-server entry to .mcp.json by default

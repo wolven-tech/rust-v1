@@ -55,7 +55,7 @@ export const authActionClient = actionClientWithMeta
     return result;
   })
   .use(async ({ next, metadata }) => {
-    const ip = headers().get("x-forwarded-for");
+    const ip = (await headers()).get("x-forwarded-for");
 
     const { success, remaining } = await ratelimit.limit(
       `${ip}-${metadata.name}`,
@@ -77,7 +77,7 @@ export const authActionClient = actionClientWithMeta
     const {
       data: { user },
     } = await getUser();
-    const supabase = createClient();
+    const supabase = await createClient();
 
     if (!user) {
       throw new Error("Unauthorized");
