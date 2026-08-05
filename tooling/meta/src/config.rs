@@ -72,9 +72,7 @@ impl Config {
     pub fn default_dev_projects(&self) -> HashMap<String, &ProjectConfig> {
         self.projects
             .iter()
-            .filter(|(_, project)| {
-                project.tasks.contains_key("dev") && project.dev_default
-            })
+            .filter(|(_, project)| project.tasks.contains_key("dev") && project.dev_default)
             .map(|(name, project)| (name.clone(), project))
             .collect()
     }
