@@ -1,392 +1,97 @@
-# rust-v1 🚀
-
-[![CI](https://github.com/wolven-tech/rust-v1/actions/workflows/ci.yml/badge.svg)](https://github.com/wolven-tech/rust-v1/actions/workflows/ci.yml)
-[![Check](https://github.com/wolven-tech/rust-v1/actions/workflows/check.yml/badge.svg)](https://github.com/wolven-tech/rust-v1/actions/workflows/check.yml)
-[![Meta CI](https://github.com/wolven-tech/rust-v1/actions/workflows/meta-ci.yml/badge.svg)](https://github.com/wolven-tech/rust-v1/actions/workflows/meta-ci.yml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Rust](https://img.shields.io/badge/Rust-1.70+-orange.svg)](https://www.rust-lang.org/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.5-blue.svg)](https://www.typescriptlang.org/)
-[![Next.js](https://img.shields.io/badge/Next.js-15-black.svg)](https://nextjs.org/)
-[![Bun](https://img.shields.io/badge/Bun-1.1.26+-pink.svg)](https://bun.sh/)
-
-> Modern full-stack monorepo template with Rust + Next.js, powered by the **meta orchestrator** with real-time log streaming
-
-**🚀 Quick Start:** `bunx degit wolven-tech/rust-v1 my-project`
-
-A production-ready monorepo template featuring:
-- 🦀 **Rust API** (Axum with Clean Architecture)
-- ⚛️ **Next.js Apps** (Marketing + Application)
-- 🎯 **Meta Orchestrator** (Unified CLI with Tmux)
-- 🖥️ **Real-time Log Streaming** (Color-coded, filterable)
-- ⚡ **Parallel Execution** (Async process management)
-
-## ✨ Meta Orchestrator
-
-**Meta** is a unified task orchestrator for modern monorepos. One command to rule them all:
-
-```bash
-meta dev              # Start all dev servers in tmux
-meta build --prod     # Build everything for production
-meta test             # Run all tests
-```
-
-**Key Features:** Smart tool routing (Turborepo + Bacon), tmux orchestration with full TUI per process, zero config, ~5 MB memory footprint.
-
-📦 **Install:** `cargo install monorepo-meta` or see [tooling/meta/README.md](tooling/meta/README.md) for details.
-
----
-
-## 🚀 Quick Start
-
-### Create Your Own Project
-
-Use `degit` to scaffold a new project from this monorepo:
-
-```bash
-# Create a new project from this template
-bunx degit wolven-tech/rust-v1 my-project
-cd my-project
-
-# Install dependencies
-bun install
-```
-
-That's it! 🎉
-
-### Prerequisites
-
-- [Bun](https://bun.sh/) 1.1.26+
-- [Rust](https://rustup.rs/) 1.70+
-- [Bacon](https://github.com/Canop/bacon) - `cargo install bacon`
-
-### Clone for Development
-
-```bash
-# Clone the repository
-git clone https://github.com/wolven-tech/rust-v1.git
-cd rust-v1
-
-# Install dependencies
-bun install
-```
-
-**Want to use meta in your own project?** Check out the **[Standalone Installation Guide](docs/meta/STANDALONE.md)** to install meta independently.
-
----
-
-## 💻 Development
-
-### The Meta Way (Recommended)
-
-```bash
-# Start all servers
-meta dev
-
-# Start specific projects
-meta dev -p api -p web
-
-# Build for production
-meta build --prod
-
-# Run tests
-meta test
-```
-
-### Traditional npm Scripts (Still Available)
-
-```bash
-# Code quality
-bun lint                # Run linters
-bun typecheck           # TypeScript checks
-bun format              # Format code
-
-# Production
-bun start:web           # Start web in production
-bun start:app           # Start app in production
-
-# Cleanup
-bun clean               # Clean node_modules
-bun clean:workspaces    # Clean turbo cache
-```
-
-**Note:** Development workflows (`dev`, `build`, `test`) have been replaced by `meta` for a better unified experience.
-
----
-
-## 📁 Project Structure
-
-```
-rust-v1/
-├── apps/
-│   ├── api/              # 🦀 Rust API (Axum + Clean Architecture)
-│   ├── web/              # ⚛️ Next.js marketing site
-│   └── app/              # ⚛️ Next.js application
-│
-├── packages/             # 8 shared packages
-│   ├── ui/               # React components (Tailwind)
-│   ├── supabase/         # Database client
-│   ├── analytics/        # PostHog integration
-│   └── ...
-│
-├── tooling/
-│   ├── meta/             # 🎯 Meta orchestrator ([crates.io](https://crates.io/crates/monorepo-meta))
-│   ├── typescript/       # Shared TS config
-│   └── e2e/              # Playwright tests
-│
-├── docs/                 # 📚 Documentation
-│   ├── meta/             # Meta-specific docs
-│   ├── guides/           # Tutorials & examples
-│   └── releases/         # Version notes
-│
-├── meta.toml             # Meta configuration
-├── turbo.json            # Turborepo config
-└── README.md             # This file
-```
-
----
-
-## 📚 Documentation
-
-### Getting Started
-- **[Quick Start](#-quick-start)** - You're reading it!
-- **[Examples](docs/guides/EXAMPLES.md)** - 30+ practical usage examples
-- **[Getting Started Guide](docs/guides/GETTING_STARTED.md)** - Detailed onboarding
-
-### Meta Orchestrator
-- **[Meta README](tooling/meta/README.md)** - Features, CLI, configuration
-- **[Log Streaming](docs/meta/LOG_STREAMING.md)** - Implementation details
-- **[Release Notes v0.2.0](docs/releases/RELEASE_v0.2.0.md)** - Latest features
-
-### Architecture
-- **[Documentation Index](docs/INDEX.md)** - Complete doc navigation
-- **[Architecture](docs/current/ARCHITECTURE.md)** - System design
-- **[Monorepo Structure](docs/current/MONOREPO_STRUCTURE.md)** - Organization
-
-### Reference
-- **[CHANGELOG](CHANGELOG.md)** - Version history
-- **[API Documentation](apps/api/README.md)** - Rust API details
-
----
-
-## 🛠️ Tech Stack
-
-### Meta Orchestrator ([crates.io](https://crates.io/crates/monorepo-meta))
-- **Rust** - Performance & safety
-- **Clap** - CLI argument parsing
-- **Tokio** - Async runtime
-- **Tmux** - Process orchestration
-
-### Frontend
-- **Next.js 15** - React framework
-- **React 19** - UI library
-- **TypeScript** - Type safety
-- **Tailwind CSS** - Styling
-- **Turborepo** - Build system
-
-### Backend
-- **Rust** - Systems programming
-- **Axum** - Web framework
-- **Clean Architecture** - 4-layer design
-- **OpenAPI** - API documentation
-
-### Development Tools
-- **Bun** - Package manager & runtime
-- **Bacon** - Rust hot-reload
-- **Biome** - Linting & formatting
-- **Playwright** - E2E testing
-
----
-
-## 🎯 Common Tasks
-
-### Development Workflow
-
-```bash
-# start
-meta dev
-
-# Watch specific projects
-meta dev -p api        # Rust API only
-meta dev -p web app    # Both Next.js apps
-```
-
-### Building
-
-```bash
-# Development build
-meta build
-
-# Production build
-meta build --prod
-
-# Specific projects
-meta build -p api --prod
-```
-
-### Testing
-
-```bash
-# Run all tests
-meta test
-
-# Future: watch mode
-meta test -w           # Coming in v0.3.0
-```
-
-### Code Quality
-
-```bash
-# Format code
-bun format
-
-# Run linters
-bun lint
-
-# Type check
-bun typecheck
-
-# Fix repository issues
-bun lint:repo:fix
-```
-
----
-
-## 🚢 Deployment
-
-### Production Build
-
-```bash
-# Build all projects
-meta build --prod
-
-# Verify builds
-ls -lh apps/api/target/release/api    # ~6 MB
-ls -lh apps/web/.next                  # Next.js build
-```
-
-### Running in Production
-
-```bash
-# Rust API
-cd apps/api
-./target/release/api
-
-# Next.js apps
-bun start:web    # Marketing site
-bun start:app    # Application
-```
-
----
-
-## 📊 Performance
-
-### Meta Orchestrator
-
-| Metric | Value |
-|--------|-------|
-| Binary size | 2.7 MB (release) |
-| Memory usage | ~5 MB (idle) |
-| CPU usage | <5% (active logging) |
-| Startup time | <50ms |
-| Throughput | 3000+ lines/sec |
-
-### Rust API
-
-| Metric | Before (TypeScript) | After (Rust) | Improvement |
-|--------|---------------------|--------------|-------------|
-| Memory | 30-50 MB | 2-5 MB | **6-10x less** |
-| Startup | ~500ms | <100ms | **5x faster** |
-| Binary | ~50 MB | 6.3 MB | **8x smaller** |
-
----
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Make your changes
-4. Test with meta: `meta build --prod && meta test`
-5. Commit your changes (`git commit -m 'Add amazing feature'`)
-6. Push to the branch (`git push origin feature/amazing-feature`)
-7. Open a Pull Request
-
-### Development Guidelines
-
-- Use `meta` for development workflows
-- Format code before committing: `bun format`
-- Ensure tests pass: `meta test`
-- Update documentation as needed
-
-### Quality Standards
-
-**This project maintains a zero-warning, zero-failure policy:**
-
-- ✅ **Meta (Rust):** Zero warnings, all tests pass
-- ✅ **TypeScript:** No type errors, linting passes
-- ✅ **Formatting:** All code formatted (Biome/rustfmt)
-
-**For Rust contributions:**
-
-```bash
-# Meta quality checks
-cd tooling/meta
-cargo fmt -- --check          # Verify formatting
-cargo clippy -- -D warnings   # Lint with warnings as errors
-cargo test                    # Run all tests
-cargo build --release         # Zero-warning build
-```
-
-**For TypeScript contributions:**
-
-```bash
-bun format       # Format code
-bun lint         # Run linters
-bun typecheck    # Type checking
-```
-
----
-
-## 🎉 What's New
-
-See [CHANGELOG](CHANGELOG.md) for complete history.
-
----
-
-## 🔗 Links
-
-- **Documentation:** [docs/INDEX.md](docs/INDEX.md)
-- **Examples:** [docs/guides/EXAMPLES.md](docs/guides/EXAMPLES.md)
-- **Meta CLI:** [tooling/meta/README.md](tooling/meta/README.md)
-- **Changelog:** [CHANGELOG.md](CHANGELOG.md)
-- **License:** [LICENSE.md](LICENSE.md)
-
----
-
-## 📧 Support
-
-- **Issues:** Report bugs via GitHub issues
-- **Questions:** Check [docs/INDEX.md](docs/INDEX.md) first
-- **Contributing:** See [Contributing](#-contributing) above
-
----
-
-## 📜 License
-
-MIT License - See [LICENSE.md](LICENSE.md)
-
----
-
 <div align="center">
 
-**Built with ❤️ by [Wolven Tech](https://github.com/wolven-tech)**
+# rust-v1
 
-Created by [Decebal Dobrica](https://decebaldobrica.com)
+**Full-stack monorepo template with Rust + Next.js, powered by the meta orchestrator.**<br>
+Unified CLI for all development tasks, real-time log streaming, and parallel execution across a Rust API and React applications.
 
-[![Wolven Tech](https://img.shields.io/badge/Wolven_Tech-GitHub-purple?style=for-the-badge&logo=github)](https://github.com/wolven-tech)
-[![X](https://img.shields.io/badge/X-Follow-000000?style=for-the-badge&logo=x&logoColor=white)](https://x.com/ddonprogramming)
+[![CI](https://github.com/wolven-tech/rust-v1/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/wolven-tech/rust-v1/actions/workflows/ci.yml)
+[![Check](https://github.com/wolven-tech/rust-v1/actions/workflows/check.yml/badge.svg?branch=main)](https://github.com/wolven-tech/rust-v1/actions/workflows/check.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue)](LICENSE.md)
+[![Rust](https://img.shields.io/badge/Rust-1.70+-000000?logo=rust&logoColor=white)](#)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.5+-3178c6?logo=typescript&logoColor=white)](#)
+[![Next.js](https://img.shields.io/badge/Next.js-15-000000?logo=nextdotjs&logoColor=white)](#)
+
+[![Built with Rust, TypeScript, React, and Next.js](https://skillicons.dev/icons?i=rust,typescript,react,nextjs)](https://skillicons.dev)
+
+[Docs](docs/INDEX.md) · [Examples](docs/guides/EXAMPLES.md) · [Install](#install) · [What it does](#what-it-does) · [Architecture](#architecture)
 
 </div>
 
 ---
 
-**Happy coding! 🚀**
+**This repo is a template for new Rust + Next.js projects.** [rust-v2](https://github.com/wolven-tech/rust-v2) is its successor; for new projects, use rust-v2 and refer to this repo only for the meta orchestrator (available as a standalone crate on crates.io).
+
+A monorepo is a single repository containing multiple services and applications. This template brings together a Rust API server (using Axum), two Next.js applications (marketing and product), and a unified orchestration CLI (meta) that starts all of them in a Tmux session with color-coded, filterable logs.
+
+| | |
+|---|---|
+| **Orchestrator** | Meta CLI: start all servers with `meta dev`, watch specific projects, build for production |
+| **API server** | Axum (Rust) with Clean Architecture, 4-layer design, OpenAPI documentation |
+| **Frontend apps** | Next.js 15 with React 19, Tailwind CSS, TypeScript—both marketing and application UIs |
+| **Package manager** | Bun (JavaScript) and Cargo (Rust), with Turborepo build orchestration |
+| **Real-time logs** | Color-coded, filterable output from all processes in one terminal window |
+
+## Install
+
+```sh
+bun install                           # Install all dependencies
+cargo install monorepo-meta           # Install meta orchestrator, or: cargo binstall monorepo-meta
+meta dev                              # Start all dev servers in Tmux
+```
+
+For existing projects, [docs/meta/STANDALONE.md](docs/meta/STANDALONE.md) shows how to integrate meta independently.
+
+## What it does
+
+| | |
+|---|---|
+| **Start all servers** | `meta dev` starts the API, marketing site, and product app in a Tmux session with monitored logs |
+| **Filter and watch logs** | Real-time color-coded output from each process, filterable by project or severity; each process in its own Tmux pane |
+| **Build for production** | `meta build --prod` compiles the Rust API and Next.js apps; zero-warning binaries, ~6 MB API binary and optimized frontend bundles |
+| **Run tests** | `meta test` runs all test suites (Rust unit tests, TypeScript checks, Playwright E2E) |
+| **Parallel execution** | Bacon watches Rust code and hot-reloads during development; Turborepo parallelizes TypeScript builds and linting |
+
+## Architecture
+
+```
+rust-v1/
+├── apps/
+│   ├── api/              Rust API server (Axum, 4-layer Clean Architecture)
+│   ├── web/              Next.js marketing site
+│   └── app/              Next.js product application
+├── packages/             Shared TypeScript and Rust libraries
+│   ├── ui/               React component library (Tailwind)
+│   ├── supabase/         Database client wrapper
+│   ├── analytics/        PostHog integration
+│   └── ...
+├── tooling/
+│   ├── meta/             Meta orchestrator (standalone crate: monorepo-meta)
+│   ├── typescript/       Shared TypeScript config
+│   └── e2e/              Playwright end-to-end tests
+├── docs/                 Project documentation
+├── meta.toml             Meta configuration
+└── turbo.json            Turborepo build config
+```
+
+## Why not existing tools
+
+Existing monorepo tools handle either the build graph or process orchestration, but not both with zero config:
+
+- **Turborepo** orchestrates builds but leaves you to start dev servers manually or via shell scripts
+- **npm/yarn workspaces** and **Bun workspaces** provide package resolution but no build or process management
+- **Tmux** needs scripting to coordinate multi-process starts and logging
+- **Lerna** focuses on publishing, not development
+
+Meta combines build awareness (Turborepo for TypeScript, Bacon for Rust) with unified process orchestration (Tmux panes, real-time logs, unified CLI) in ~5 MB with zero configuration.
+
+## Limits
+
+- **Meta: early release.** Core features are stable; watch mode for tests is planned for v0.3.0
+- **TypeScript apps only** for dev workflows; Bun is used, but the template works with npm and yarn too
+- **Rust toolchain required** for the API; if you only need the frontend, `meta dev -p web app` runs only Next.js
+- **Tmux or screen required** for `meta dev` (not available in headless environments; use individual `bun dev` and `cargo run` instead)
+
+## Licence
+
+MIT
